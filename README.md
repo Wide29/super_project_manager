@@ -34,3 +34,12 @@ The platform treats each question as the smallest production unit and supports:
 2. Freeze the core domain model and task state machine.
 3. Choose the implementation stack for backend, frontend, and AI orchestration.
 4. Break the MVP into milestones and start scaffolding the application code.
+
+## Backend MVP setup
+
+1. Copy `.env.example` to `.env`
+2. Start PostgreSQL locally
+3. Run `npm install`
+4. Run `npx prisma migrate dev --name init`
+5. Run `npm run start:dev`
+6. Open `http://localhost:3000/api`
