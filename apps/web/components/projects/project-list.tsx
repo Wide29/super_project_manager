@@ -2,6 +2,17 @@ import Link from 'next/link';
 import type { ProjectSummary } from '../../lib/types';
 
 export function ProjectList({ projects }: { projects: ProjectSummary[] }) {
+  if (projects.length === 0) {
+    return (
+      <section className="rounded-panel border border-dashed border-panelLine bg-white p-10 text-center shadow-panel">
+        <h2 className="text-xl font-semibold text-slateDeep">还没有项目</h2>
+        <p className="mt-3 text-sm text-slate-500">
+          可以先在右侧创建首个项目，随后在这里查看进度与题型分布。
+        </p>
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {projects.map((project) => (

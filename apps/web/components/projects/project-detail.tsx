@@ -43,21 +43,29 @@ export function ProjectDetailView({
           <h3 className="text-lg font-semibold">批次概览</h3>
           <span className="text-sm text-slate-500">共 {batches.length} 个批次</span>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {batches.map((batch) => (
-            <Link
-              key={batch.id}
-              href={`/batches/${batch.id}`}
-              className="rounded-2xl border border-panelLine bg-cloud p-4 transition hover:-translate-y-0.5"
-            >
-              <p className="font-medium">{batch.name}</p>
-              <p className="mt-2 text-sm text-slate-500">状态：{batch.status}</p>
-              <p className="mt-1 text-sm text-slate-500">
-                计划题量：{batch.plannedTaskCount ?? '未设置'}
-              </p>
-            </Link>
-          ))}
-        </div>
+        {batches.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-panelLine bg-cloud px-5 py-8 text-center">
+            <p className="text-sm text-slate-500">
+              当前项目还没有批次，可以通过右侧表单先创建一个批次。
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {batches.map((batch) => (
+              <Link
+                key={batch.id}
+                href={`/batches/${batch.id}`}
+                className="rounded-2xl border border-panelLine bg-cloud p-4 transition hover:-translate-y-0.5"
+              >
+                <p className="font-medium">{batch.name}</p>
+                <p className="mt-2 text-sm text-slate-500">状态：{batch.status}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  计划题量：{batch.plannedTaskCount ?? '未设置'}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 import { AppShell } from '../../../components/layout/app-shell';
+import { BatchCreateForm } from '../../../components/forms/batch-create-form';
 import { ProjectDetailView } from '../../../components/projects/project-detail';
 import { getProjectBatches } from '../../../lib/api/batches';
 import { getProject } from '../../../lib/api/projects';
@@ -17,7 +18,11 @@ export default async function ProjectDetailPage({
   ]);
 
   return (
-    <AppShell title="项目详情" description="查看项目信息、SOP、验收标准与批次状态。">
+    <AppShell
+      title="项目详情"
+      description="查看项目信息、SOP、验收标准与批次状态。"
+      rightSlot={<BatchCreateForm projectId={project.id} />}
+    >
       <ProjectDetailView project={project} batches={batches} />
     </AppShell>
   );
