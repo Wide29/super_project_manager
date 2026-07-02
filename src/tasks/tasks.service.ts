@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { BatchesService } from '../batches/batches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { CreateTaskImportItemDto } from './dto/import-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
@@ -23,6 +24,34 @@ export class TasksService {
         inputPayload: inputPayload as Prisma.InputJsonValue
       }
     });
+  }
+
+  async import(batchId: string, items: CreateTaskImportItemDto[]) {
+    await this.batchesService.findOne(batchId);
+
+    const createdTasks = await Promise.all(
+      items.map((item) =>
+        this.prisma.taskItem.create({
+          data: {
+            batchId,
+            externalRef: item.externalRef,
+            title: item.title,
+            inputPayload: item.inputPayload as Prisma.InputJsonValue,
+            status: item.status,
+            priority: item.priority ?? 0
+          },
+          select: {
+            id: true,
+            title: true
+          }
+        })
+      )
+    );
+
+    return {
+      createdCount: createdTasks.length,
+      tasks: createdTasks
+    };
   }
 
   async findByBatch(batchId: string) {

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { ImportTasksDto } from './dto/import-tasks.dto';
 import { SubmitTaskDto } from './dto/submit-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
@@ -13,6 +14,11 @@ export class TasksController {
   @Post('batches/:batchId/tasks')
   create(@Param('batchId') batchId: string, @Body() dto: CreateTaskDto) {
     return this.tasksService.create(batchId, dto);
+  }
+
+  @Post('batches/:batchId/tasks/import')
+  import(@Param('batchId') batchId: string, @Body() dto: ImportTasksDto) {
+    return this.tasksService.import(batchId, dto.tasks);
   }
 
   @Get('batches/:batchId/tasks')
