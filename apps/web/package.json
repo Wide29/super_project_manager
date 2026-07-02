@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 3001",
     "lint": "next lint",
-    "smoke:forms": "node tests/project-batch-forms.smoke.mjs"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "gsap": "^3.12.7",
@@ -16,6 +16,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

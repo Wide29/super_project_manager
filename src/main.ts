@@ -5,7 +5,18 @@ import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const allowedOrigins = (
+    process.env.CORS_ORIGINS ??
+    'http://localhost:3001,http://127.0.0.1:3001'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const app = await NestFactory.create(AppModule, {
+    cors: {
+      origin: allowedOrigins
+    }
+  });
 
   app.setGlobalPrefix('');
   app.useGlobalPipes(
