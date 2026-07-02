@@ -13,6 +13,15 @@ export interface ProjectDetail extends ProjectSummary {
   updatedAt: string;
 }
 
+export interface CreateProjectInput {
+  name: string;
+  description?: string;
+  status?: 'draft' | 'active' | 'archived';
+  taskType: string;
+  sopDocument?: string;
+  acceptanceCriteria?: string;
+}
+
 export interface BatchSummary {
   id: string;
   projectId: string;
@@ -24,6 +33,12 @@ export interface BatchSummary {
 
 export interface BatchDetail extends BatchSummary {
   updatedAt: string;
+}
+
+export interface CreateBatchInput {
+  name: string;
+  status?: 'draft' | 'in_progress' | 'ready_for_delivery' | 'closed';
+  plannedTaskCount?: number;
 }
 
 export interface TaskSummary {
@@ -46,6 +61,33 @@ export interface TaskDetail extends TaskSummary {
   updatedAt: string;
 }
 
+export interface CreateTaskInput {
+  externalRef?: string;
+  title: string;
+  inputPayload: Record<string, unknown>;
+  status?:
+    | 'pending_allocation'
+    | 'pending_pickup'
+    | 'in_progress'
+    | 'submitted'
+    | 'returned';
+  priority?: number;
+}
+
+export interface ImportTasksInput {
+  tasks: CreateTaskInput[];
+}
+
+export interface ImportedTaskSummary {
+  id: string;
+  title: string;
+}
+
+export interface ImportTasksResponse {
+  createdCount: number;
+  tasks: ImportedTaskSummary[];
+}
+
 export interface TaskAssignment {
   id: string;
   taskItemId: string;
@@ -55,6 +97,13 @@ export interface TaskAssignment {
   assignedAt: string;
   completedAt?: string | null;
   notes?: string | null;
+}
+
+export interface CreateAssignmentInput {
+  operatorId?: string;
+  assigneeId: string;
+  status?: 'assigned' | 'accepted' | 'completed' | 'rejected';
+  notes?: string;
 }
 
 export interface DashboardOverview {
