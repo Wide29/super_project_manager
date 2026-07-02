@@ -1,0 +1,36 @@
+# Agent-Powered Data Production Platform
+
+This repository contains the initial product foundation for an agent-powered, human-in-the-loop data production platform.
+
+## What is in this repo
+
+- Product vision and PRD for the MVP and Agent-enabled roadmap
+- System architecture draft
+- Suggested repository layout for future implementation
+
+## Product summary
+
+The platform treats each question as the smallest production unit and supports:
+
+- Project creation and batch management
+- Capacity allocation from project manager to operators
+- Continuous task pickup for annotators
+- QC and delivery workflows
+- Algorithm-side sampling and acceptance
+- Agent assistance across SOP drafting, pre-annotation, QC, acceptance analysis, and operations
+
+## Repository structure
+
+- `docs/prd/`
+  Product requirements drafts
+- `docs/architecture/`
+  Architecture and data model drafts
+- `docs/product/`
+  Page inventory and functional decomposition
+
+## Suggested next steps
+
+1. Confirm MVP scope and role permissions.
+2. Freeze the core domain model and task state machine.
+3. Choose the implementation stack for backend, frontend, and AI orchestration.
+4. Break the MVP into milestones and start scaffolding the application code.
