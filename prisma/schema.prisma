@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  draft
+  active
+  archived
+}
+
+enum BatchStatus {
+  draft
+  in_progress
+  ready_for_delivery
+  closed
+}
+
+enum TaskItemStatus {
+  pending_allocation
+  pending_pickup
+  in_progress
+  submitted
+  returned
+}
+
+enum TaskAssignmentStatus {
+  assigned
+  accepted
+  completed
+  rejected
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+  name               String
+  description        String?
+  status             ProjectStatus @default(draft)
+  taskType           String
+  sopDocument        String?
+  acceptanceCriteria String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  batches            Batch[]
+}
+
+model Batch {
+  id               String      @id @default(cuid())
+  projectId        String
+  name             String
+  status           BatchStatus @default(draft)
+  plannedTaskCount Int?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks            TaskItem[]
+
+  @@index([projectId])
+}
+
+model TaskItem {
+  id           String         @id @default(cuid())
+  batchId      String
+  externalRef  String?
+  title        String
+  inputPayload Json
+  status       TaskItemStatus @default(pending_allocation)
+  priority     Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  batch        Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  assignments  TaskAssignment[]
+
+  @@index([batchId])
+}
+
+model TaskAssignment {
+  id          String               @id @default(cuid())
+  taskItemId  String
+  operatorId  String?
+  assigneeId  String
+  status      TaskAssignmentStatus @default(assigned)
+  assignedAt  DateTime             @default(now())
+  completedAt DateTime?
+  notes       String?
+  taskItem    TaskItem             @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+
+  @@index([taskItemId])
+}
