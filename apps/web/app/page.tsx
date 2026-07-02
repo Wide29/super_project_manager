@@ -1,23 +1,19 @@
 import { AppShell } from '../components/layout/app-shell';
+import { OverviewCards } from '../components/dashboard/overview-cards';
+import { getDashboardOverview } from '../lib/api/dashboard';
+import { getProjects } from '../lib/api/projects';
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const [overview, projects] = await Promise.all([
+    getDashboardOverview(),
+    getProjects()
+  ]);
+
   return (
     <AppShell title="总览" description="查看项目进度、快速进入管理与标注流程。">
-      <div className="grid gap-6 md:grid-cols-3">
-        {[
-          ['项目总数', '4'],
-          ['进行中批次', '12'],
-          ['待领取任务', '128']
-        ].map(([label, value]) => (
-          <article
-            key={label}
-            className="rounded-panel border border-panelLine bg-white p-6 shadow-panel"
-          >
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-3 text-3xl font-semibold text-slateDeep">{value}</p>
-          </article>
-        ))}
-      </div>
+      <OverviewCards overview={overview} projects={projects} />
     </AppShell>
   );
 }

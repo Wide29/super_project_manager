@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { SubmitTaskDto } from './dto/submit-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
@@ -19,6 +20,11 @@ export class TasksController {
     return this.tasksService.findByBatch(batchId);
   }
 
+  @Get('tasks/queue/next')
+  getNext(@Query('assigneeId') assigneeId: string) {
+    return this.tasksService.getNextForAssignee(assigneeId);
+  }
+
   @Get('tasks/:id')
   findOne(@Param('id') id: string) {
     return this.tasksService.findOne(id);
@@ -27,5 +33,10 @@ export class TasksController {
   @Patch('tasks/:id')
   update(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
     return this.tasksService.update(id, dto);
+  }
+
+  @Post('tasks/:id/submit')
+  submit(@Param('id') id: string, @Body() dto: SubmitTaskDto) {
+    return this.tasksService.submit(id, dto.assigneeId, dto.outputPayload, dto.notes);
   }
 }

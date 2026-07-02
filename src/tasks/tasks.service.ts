@@ -58,4 +58,52 @@ export class TasksService {
       }
     });
   }
+
+  async getNextForAssignee(assigneeId: string) {
+    const assignment = await this.prisma.taskAssignment.findFirst({
+      where: {
+        assigneeId,
+        status: {
+          in: ['assigned', 'accepted']
+        }
+      },
+      orderBy: {
+        assignedAt: 'asc'
+      },
+      include: {
+        taskItem: true
+      }
+    });
+
+    return assignment?.taskItem ?? null;
+  }
+
+  async submit(
+    id: string,
+    assigneeId: string,
+    outputPayload: Record<string, unknown>,
+    notes?: string
+  ) {
+    await this.findOne(id);
+
+    await this.prisma.taskAssignment.updateMany({
+      where: {
+        taskItemId: id,
+        assigneeId
+      },
+      data: {
+        status: 'completed',
+        completedAt: new Date(),
+        notes
+      }
+    });
+
+    return this.prisma.taskItem.update({
+      where: { id },
+      data: {
+        status: 'submitted',
+        inputPayload: outputPayload as Prisma.InputJsonValue
+      }
+    });
+  }
 }
