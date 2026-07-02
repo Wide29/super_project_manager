@@ -29,22 +29,24 @@ export class TasksService {
   async import(batchId: string, items: CreateTaskImportItemDto[]) {
     await this.batchesService.findOne(batchId);
 
-    const createdTasks = await Promise.all(
-      items.map((item) =>
-        this.prisma.taskItem.create({
-          data: {
-            batchId,
-            externalRef: item.externalRef,
-            title: item.title,
-            inputPayload: item.inputPayload as Prisma.InputJsonValue,
-            status: item.status,
-            priority: item.priority ?? 0
-          },
-          select: {
-            id: true,
-            title: true
-          }
-        })
+    const createdTasks = await this.prisma.$transaction((tx) =>
+      Promise.all(
+        items.map((item) =>
+          tx.taskItem.create({
+            data: {
+              batchId,
+              externalRef: item.externalRef,
+              title: item.title,
+              inputPayload: item.inputPayload as Prisma.InputJsonValue,
+              status: item.status,
+              priority: item.priority ?? 0
+            },
+            select: {
+              id: true,
+              title: true
+            }
+          })
+        )
       )
     );
 
