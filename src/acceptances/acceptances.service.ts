@@ -15,6 +15,10 @@ export class AcceptancesService {
       throw new NotFoundException(`Delivery ${deliveryId} not found`);
     }
 
+    if (delivery.status !== 'submitted') {
+      throw new BadRequestException('only submitted deliveries can be accepted');
+    }
+
     if (dto.sampleSize !== dto.sampledTaskIds.length) {
       throw new BadRequestException('sampleSize must match sampledTaskIds length');
     }

@@ -180,4 +180,54 @@ describe('Acceptances API', () => {
       })
       .expect(400);
   });
+
+  it('rejects acceptances for superseded deliveries', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/projects')
+      .send({
+        name: 'Superseded Delivery Project',
+        taskType: 'judge'
+      })
+      .expect(201);
+
+    const batch = await request(app.getHttpServer())
+      .post(`/projects/${project.body.id}/batches`)
+      .send({ name: 'Superseded Delivery Batch' })
+      .expect(201);
+
+    const task = await request(app.getHttpServer())
+      .post(`/batches/${batch.body.id}/tasks`)
+      .send({
+        title: 'Superseded delivery task',
+        status: 'qa_passed',
+        inputPayload: { title: 'Superseded delivery task' }
+      })
+      .expect(201);
+
+    const firstDelivery = await request(app.getHttpServer())
+      .post(`/batches/${batch.body.id}/deliveries`)
+      .send({
+        submittedBy: 'ops-1',
+        notes: 'first delivery'
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/batches/${batch.body.id}/deliveries`)
+      .send({
+        submittedBy: 'ops-1',
+        notes: 'second delivery'
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/deliveries/${firstDelivery.body.id}/acceptances`)
+      .send({
+        reviewedBy: 'algo-1',
+        decision: 'accepted',
+        sampleSize: 1,
+        sampledTaskIds: [task.body.id]
+      })
+      .expect(400);
+  });
 });
