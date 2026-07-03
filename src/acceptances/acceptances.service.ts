@@ -35,6 +35,28 @@ export class AcceptancesService {
       throw new BadRequestException('rejectedTaskIds must be included in sampledTaskIds');
     }
 
+    if (dto.decision === 'accepted' && rejectedTaskIds.size > 0) {
+      throw new BadRequestException('accepted batches cannot include rejectedTaskIds');
+    }
+
+    if (dto.decision === 'partially_rejected') {
+      if (rejectedTaskIds.size === 0) {
+        throw new BadRequestException(
+          'partially_rejected batches must include at least one rejected task'
+        );
+      }
+
+      if (rejectedTaskIds.size === dto.sampledTaskIds.length) {
+        throw new BadRequestException(
+          'partially_rejected batches must keep at least one sampled task accepted'
+        );
+      }
+    }
+
+    if (dto.decision === 'rejected' && rejectedTaskIds.size !== dto.sampledTaskIds.length) {
+      throw new BadRequestException('rejected batches must reject every sampled task');
+    }
+
     const sampledTasks = await this.prisma.taskItem.findMany({
       where: {
         id: {

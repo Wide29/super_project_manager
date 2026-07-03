@@ -123,4 +123,61 @@ describe('Acceptances API', () => {
       })
       .expect(400);
   });
+
+  it('rejects inconsistent acceptance decisions and rejected task sets', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/projects')
+      .send({
+        name: 'Acceptance Consistency Project',
+        taskType: 'judge'
+      })
+      .expect(201);
+
+    const batch = await request(app.getHttpServer())
+      .post(`/projects/${project.body.id}/batches`)
+      .send({ name: 'Acceptance Consistency Batch' })
+      .expect(201);
+
+    const taskIds: string[] = [];
+    for (const title of ['Consistency Task A', 'Consistency Task B']) {
+      const task = await request(app.getHttpServer())
+        .post(`/batches/${batch.body.id}/tasks`)
+        .send({
+          title,
+          status: 'qa_passed',
+          inputPayload: { title }
+        })
+        .expect(201);
+      taskIds.push(task.body.id);
+    }
+
+    const delivery = await request(app.getHttpServer())
+      .post(`/batches/${batch.body.id}/deliveries`)
+      .send({
+        submittedBy: 'ops-1'
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/deliveries/${delivery.body.id}/acceptances`)
+      .send({
+        reviewedBy: 'algo-1',
+        decision: 'accepted',
+        sampleSize: 2,
+        sampledTaskIds: taskIds,
+        rejectedTaskIds: [taskIds[0]]
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post(`/deliveries/${delivery.body.id}/acceptances`)
+      .send({
+        reviewedBy: 'algo-1',
+        decision: 'partially_rejected',
+        sampleSize: 2,
+        sampledTaskIds: taskIds,
+        rejectedTaskIds: []
+      })
+      .expect(400);
+  });
 });

@@ -23,18 +23,11 @@ export class ReviewsService {
       }
     });
 
-    const nextStatus =
-      dto.stage === 'qa'
-        ? dto.decision === 'passed'
-          ? 'qa_passed'
-          : 'qa_rejected'
-        : dto.decision === 'passed'
-          ? 'sampling_passed'
-          : 'sampling_rejected';
-
     await this.prisma.taskItem.update({
       where: { id: taskId },
-      data: { status: nextStatus }
+      data: {
+        status: dto.decision === 'passed' ? 'qa_passed' : 'qa_rejected'
+      }
     });
 
     return review;

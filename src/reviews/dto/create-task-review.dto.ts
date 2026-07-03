@@ -2,8 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum TaskReviewStageDto {
-  QA = 'qa',
-  ALGORITHM_SAMPLING = 'algorithm_sampling'
+  QA = 'qa'
 }
 
 export enum TaskReviewDecisionDto {
@@ -14,7 +13,7 @@ export enum TaskReviewDecisionDto {
 export class CreateTaskReviewDto {
   @ApiProperty({ enum: TaskReviewStageDto })
   @IsEnum(TaskReviewStageDto)
-  stage!: 'qa' | 'algorithm_sampling';
+  stage!: 'qa';
 
   @ApiProperty({ enum: TaskReviewDecisionDto })
   @IsEnum(TaskReviewDecisionDto)

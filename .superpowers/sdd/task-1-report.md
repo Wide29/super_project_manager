@@ -118,3 +118,37 @@ Concerns / follow-ups:
 
 Commit SHA:
 - Pending fix commit
+
+---
+
+# Task 1 Review Fix Wave 2
+
+Status: DONE
+
+Files changed:
+- `src/acceptances/acceptances.service.ts`
+- `src/reviews/dto/create-task-review.dto.ts`
+- `src/reviews/reviews.service.ts`
+- `test/acceptances.e2e-spec.ts`
+
+Commands run and results:
+- `npm run test:e2e -- --runTestsByPath test/reviews.e2e-spec.ts test/acceptances.e2e-spec.ts`
+  - Passed: `2` suites, `4` tests
+  - Covered QA-only public review flow plus acceptance decision consistency rules
+- `npm run build`
+  - Passed
+- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
+  - Passed: `6` suites, `10` tests
+
+Fix summary:
+- Public `POST /tasks/:taskId/reviews` is now QA-only and no longer allows direct `algorithm_sampling` writes.
+- Acceptance validation now enforces semantic consistency between `decision` and the rejected sample set:
+  - `accepted` cannot include rejected tasks
+  - `partially_rejected` must include at least one rejected task and at least one accepted sampled task
+  - `rejected` must reject every sampled task
+
+Concerns / follow-ups:
+- `decidedByRole` is still not persisted in the settlement record; this remains a minor audit gap until the auth/actor model arrives in later tasks.
+
+Commit SHA:
+- Pending fix commit
