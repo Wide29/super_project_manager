@@ -121,6 +121,35 @@ Commit SHA:
 
 ---
 
+# Task 1 Review Fix Wave 4
+
+Status: DONE
+
+Files changed:
+- `src/acceptances/acceptances.service.ts`
+- `test/acceptances.e2e-spec.ts`
+
+Commands run and results:
+- `npm run test:e2e -- --runTestsByPath test/acceptances.e2e-spec.ts`
+  - Passed: `1` suite, `5` tests
+  - Added coverage that the same delivery cannot be accepted twice
+- `npm run build`
+  - Passed
+- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
+  - Passed: `6` suites, `12` tests
+
+Fix summary:
+- Formal batch acceptance is now one-shot per delivery.
+- Once a delivery has one acceptance record, subsequent attempts against the same delivery are rejected with `400`.
+
+Concerns / follow-ups:
+- Remaining reviewer notes are minor only: settlement role is not yet persisted for audit, and repeated transfer lineage could be tightened later if the business wants single-successor enforcement.
+
+Commit SHA:
+- Pending fix commit
+
+---
+
 # Task 1 Review Fix Wave 3
 
 Status: DONE

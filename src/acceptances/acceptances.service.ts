@@ -19,6 +19,14 @@ export class AcceptancesService {
       throw new BadRequestException('only submitted deliveries can be accepted');
     }
 
+    const existingAcceptance = await this.prisma.batchAcceptance.findFirst({
+      where: { deliveryId }
+    });
+
+    if (existingAcceptance) {
+      throw new BadRequestException('a submitted delivery can only be accepted once');
+    }
+
     if (dto.sampleSize !== dto.sampledTaskIds.length) {
       throw new BadRequestException('sampleSize must match sampledTaskIds length');
     }
