@@ -17,8 +17,8 @@ export class TasksController {
   }
 
   @Post('batches/:batchId/tasks/import')
-  import(@Param('batchId') batchId: string, @Body() dto: ImportTasksDto) {
-    return this.tasksService.import(batchId, dto.tasks);
+  importTasks(@Param('batchId') batchId: string, @Body() dto: ImportTasksDto) {
+    return this.tasksService.importTasks(batchId, dto.tasks);
   }
 
   @Get('batches/:batchId/tasks')

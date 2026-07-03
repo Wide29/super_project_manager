@@ -12,7 +12,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm run start:dev',
+      command: 'npm run build && npm run start:prod',
       cwd: repoRoot,
       url: 'http://localhost:3000/projects',
       reuseExistingServer: false,

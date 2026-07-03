@@ -1,3 +1,5 @@
+import { TaskCreateForm } from '../../../components/forms/task-create-form';
+import { TaskImportForm } from '../../../components/forms/task-import-form';
 import { BatchList } from '../../../components/batches/batch-list';
 import { AppShell } from '../../../components/layout/app-shell';
 import { getBatch } from '../../../lib/api/batches';
@@ -14,7 +16,16 @@ export default async function BatchDetailPage({
   const [batch, tasks] = await Promise.all([getBatch(batchId), getBatchTasks(batchId)]);
 
   return (
-    <AppShell title="批次详情" description="查看批次题量、提交进度与任务列表。">
+    <AppShell
+      title="批次详情"
+      description="查看批次题量、提交进度与任务列表。"
+      rightSlot={
+        <div className="space-y-6">
+          <TaskCreateForm batchId={batch.id} />
+          <TaskImportForm batchId={batch.id} />
+        </div>
+      }
+    >
       <BatchList batch={batch} tasks={tasks} />
     </AppShell>
   );

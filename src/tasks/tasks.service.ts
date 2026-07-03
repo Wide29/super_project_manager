@@ -26,7 +26,7 @@ export class TasksService {
     });
   }
 
-  async import(batchId: string, items: CreateTaskImportItemDto[]) {
+  async importTasks(batchId: string, items: CreateTaskImportItemDto[]) {
     await this.batchesService.findOne(batchId);
 
     const createdTasks = await this.prisma.$transaction((tx) =>

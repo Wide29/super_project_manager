@@ -1,4 +1,5 @@
 import { AssistantDrawer } from '../../../components/ai/assistant-drawer';
+import { AssignmentCreateForm } from '../../../components/forms/assignment-create-form';
 import { AssignmentPanel } from '../../../components/assignments/assignment-panel';
 import { AppShell } from '../../../components/layout/app-shell';
 import { TaskList } from '../../../components/tasks/task-list';
@@ -24,6 +25,7 @@ export default async function TaskDetailPage({
       description="围绕单题查看内容、分配记录与 AI 建议。"
       rightSlot={
         <div className="space-y-6">
+          <AssignmentCreateForm taskId={task.id} />
           <AssignmentPanel assignments={assignments} />
           <AssistantDrawer
             taskId={task.id}

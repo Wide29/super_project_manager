@@ -20,3 +20,6 @@ DONE_WITH_CONCERNS
 ## Concerns / Follow-ups
 - No functional blockers found for this task.
 - The ESLint plugin warning appears to be pre-existing, but it may be worth aligning the web app config later.
+
+## Commit
+- `6f23c57` (`feat: add admin mutation helpers`)
