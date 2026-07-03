@@ -80,4 +80,4 @@ Concerns / follow-ups:
 - Lint remains blocked by missing ESLint v9 flat config, unrelated to this slice’s TypeScript/build correctness.
 
 Commit SHA:
-- Pending at report-write time.
+- `e1132b8 feat: add delivery acceptance workflow backend`
