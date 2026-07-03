@@ -198,6 +198,51 @@ export interface CreateTaskSettlementInput {
   }>;
 }
 
+export interface BatchDelivery {
+  id: string;
+  batchId: string;
+  submittedBy: string;
+  notes?: string | null;
+  submittedAt: string;
+  status: 'submitted' | 'superseded';
+}
+
+export interface CreateBatchDeliveryInput {
+  submittedBy: string;
+  notes?: string;
+}
+
+export interface BatchAcceptanceReview {
+  id: string;
+  taskItemId: string;
+  stage: 'algorithm_sampling';
+  decision: 'passed' | 'rejected';
+  reviewerId: string;
+  notes?: string | null;
+  createdAt: string;
+  batchAcceptanceId?: string | null;
+}
+
+export interface BatchAcceptance {
+  id: string;
+  deliveryId: string;
+  reviewedBy: string;
+  decision: 'accepted' | 'partially_rejected' | 'rejected';
+  sampleSize: number;
+  notes?: string | null;
+  reviewedAt: string;
+  reviews: BatchAcceptanceReview[];
+}
+
+export interface CreateBatchAcceptanceInput {
+  reviewedBy: string;
+  decision: 'accepted' | 'partially_rejected' | 'rejected';
+  sampleSize: number;
+  sampledTaskIds: string[];
+  rejectedTaskIds?: string[];
+  notes?: string;
+}
+
 export interface DashboardOverview {
   projectCount: number;
   batchCount: number;

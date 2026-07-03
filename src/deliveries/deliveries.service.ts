@@ -52,4 +52,13 @@ export class DeliveriesService {
       return delivery;
     });
   }
+
+  async findByBatch(batchId: string) {
+    await this.batchesService.findOne(batchId);
+
+    return this.prisma.batchDelivery.findMany({
+      where: { batchId },
+      orderBy: { submittedAt: 'desc' }
+    });
+  }
 }

@@ -101,3 +101,58 @@ test('批次页和任务页支持创建任务、导入 JSON 和分配标注员',
   await expect(page.getByText(assigneeId).first()).toBeVisible();
   await expect(page.getByText('Playwright 分配验证')).toBeVisible();
 });
+
+test('批次页支持发起交付与算法验收', async ({ page, request }) => {
+  const projectResponse = await request.post('http://localhost:3000/projects', {
+    data: {
+      name: `Delivery 项目 ${Date.now()}`,
+      taskType: 'text'
+    }
+  });
+  expect(projectResponse.ok()).toBeTruthy();
+  const project = await projectResponse.json();
+
+  const batchResponse = await request.post(
+    `http://localhost:3000/projects/${project.id}/batches`,
+    {
+      data: {
+        name: `Delivery 批次 ${Date.now()}`,
+        plannedTaskCount: 2
+      }
+    }
+  );
+  expect(batchResponse.ok()).toBeTruthy();
+  const batch = await batchResponse.json();
+
+  const taskTitles = [`验收题目 A ${Date.now()}`, `验收题目 B ${Date.now()}`];
+  for (const title of taskTitles) {
+    const taskResponse = await request.post(`http://localhost:3000/batches/${batch.id}/tasks`, {
+      data: {
+        title,
+        status: 'qa_passed',
+        inputPayload: {
+          question: title
+        }
+      }
+    });
+    expect(taskResponse.ok()).toBeTruthy();
+  }
+
+  await page.goto(`/batches/${batch.id}`);
+  await expect(page.getByRole('heading', { name: '发起交付', exact: true })).toBeVisible();
+
+  await page.getByLabel('交付说明').fill('提交第一轮批次');
+  await page.getByRole('button', { name: '确认交付' }).click();
+  await expect(page.getByText('提交第一轮批次')).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: '算法验收', exact: true })).toBeVisible();
+  await page.getByLabel('验收结论').selectOption('partially_rejected');
+  await page.getByLabel(`抽检题目 ${taskTitles[0]}`).check();
+  await page.getByLabel(`抽检题目 ${taskTitles[1]}`).check();
+  await page.getByLabel(`打回题目 ${taskTitles[0]}`).check();
+  await page.getByLabel('验收备注').fill('抽检命中一题打回');
+  await page.getByRole('button', { name: '提交验收' }).click();
+
+  await expect(page.getByText('抽检题量：2')).toBeVisible();
+  await expect(page.getByText('抽检命中一题打回')).toBeVisible();
+});

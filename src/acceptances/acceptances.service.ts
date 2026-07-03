@@ -137,4 +137,18 @@ export class AcceptancesService {
       }
     });
   }
+
+  async findByBatch(batchId: string) {
+    return this.prisma.batchAcceptance.findMany({
+      where: {
+        delivery: {
+          batchId
+        }
+      },
+      include: {
+        reviews: true
+      },
+      orderBy: { reviewedAt: 'desc' }
+    });
+  }
 }
