@@ -74,4 +74,15 @@ export class SettlementsService {
       }
     });
   }
+
+  async findByTask(taskId: string) {
+    await this.tasksService.findOne(taskId);
+
+    return this.prisma.taskSettlement.findUnique({
+      where: { taskItemId: taskId },
+      include: {
+        shares: true
+      }
+    });
+  }
 }

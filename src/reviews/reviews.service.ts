@@ -32,4 +32,13 @@ export class ReviewsService {
 
     return review;
   }
+
+  async findByTask(taskId: string) {
+    await this.tasksService.findOne(taskId);
+
+    return this.prisma.taskReview.findMany({
+      where: { taskItemId: taskId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }

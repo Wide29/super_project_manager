@@ -13,9 +13,20 @@ export function AssignmentPanel({ assignments }: { assignments: TaskAssignment[]
             <p className="text-sm text-slate-500">执行人</p>
             <p className="mt-1 font-medium text-slateDeep">{assignment.assigneeId}</p>
             <p className="mt-3 text-sm text-slate-500">状态：{assignment.status}</p>
+            {assignment.transferReason ? (
+              <p className="mt-1 text-sm text-slate-500">转交原因：{assignment.transferReason}</p>
+            ) : null}
+            {assignment.sourceAssignmentId ? (
+              <p className="mt-1 text-sm text-slate-500">
+                来源执行记录：{assignment.sourceAssignmentId}
+              </p>
+            ) : null}
             <p className="mt-1 text-sm text-slate-500">
               时间：{new Date(assignment.assignedAt).toLocaleString('zh-CN')}
             </p>
+            {assignment.notes ? (
+              <p className="mt-3 text-sm text-slate-500">备注：{assignment.notes}</p>
+            ) : null}
           </div>
         ))}
       </div>

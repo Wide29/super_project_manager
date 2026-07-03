@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateTaskSettlementDto } from './dto/create-task-settlement.dto';
 import { SettlementsService } from './settlements.service';
@@ -11,5 +11,10 @@ export class SettlementsController {
   @Post('tasks/:taskId/settlement')
   create(@Param('taskId') taskId: string, @Body() dto: CreateTaskSettlementDto) {
     return this.settlementsService.create(taskId, dto);
+  }
+
+  @Get('tasks/:taskId/settlement')
+  findByTask(@Param('taskId') taskId: string) {
+    return this.settlementsService.findByTask(taskId);
   }
 }

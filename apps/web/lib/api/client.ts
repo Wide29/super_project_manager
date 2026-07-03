@@ -20,5 +20,6 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new Error(payload || `API request failed: ${response.status}`);
   }
 
-  return response.json() as Promise<T>;
+  const payload = await response.text();
+  return (payload ? JSON.parse(payload) : null) as T;
 }

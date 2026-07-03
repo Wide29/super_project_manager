@@ -26,7 +26,15 @@ export interface BatchSummary {
   id: string;
   projectId: string;
   name: string;
-  status: 'draft' | 'in_progress' | 'ready_for_delivery' | 'closed';
+  status:
+    | 'draft'
+    | 'in_progress'
+    | 'ready_for_delivery'
+    | 'delivered'
+    | 'partially_rejected'
+    | 'accepted'
+    | 'rejected'
+    | 'closed';
   plannedTaskCount?: number | null;
   createdAt: string;
 }
@@ -37,7 +45,15 @@ export interface BatchDetail extends BatchSummary {
 
 export interface CreateBatchInput {
   name: string;
-  status?: 'draft' | 'in_progress' | 'ready_for_delivery' | 'closed';
+  status?:
+    | 'draft'
+    | 'in_progress'
+    | 'ready_for_delivery'
+    | 'delivered'
+    | 'partially_rejected'
+    | 'accepted'
+    | 'rejected'
+    | 'closed';
   plannedTaskCount?: number;
 }
 
@@ -52,7 +68,11 @@ export interface TaskSummary {
     | 'pending_pickup'
     | 'in_progress'
     | 'submitted'
-    | 'returned';
+    | 'qa_rejected'
+    | 'qa_passed'
+    | 'delivered'
+    | 'sampling_rejected'
+    | 'sampling_passed';
   priority: number;
   createdAt: string;
 }
@@ -70,7 +90,11 @@ export interface CreateTaskInput {
     | 'pending_pickup'
     | 'in_progress'
     | 'submitted'
-    | 'returned';
+    | 'qa_rejected'
+    | 'qa_passed'
+    | 'delivered'
+    | 'sampling_rejected'
+    | 'sampling_passed';
   priority?: number;
 }
 
@@ -93,17 +117,85 @@ export interface TaskAssignment {
   taskItemId: string;
   operatorId?: string | null;
   assigneeId: string;
-  status: 'assigned' | 'accepted' | 'completed' | 'rejected';
+  status:
+    | 'assigned'
+    | 'accepted'
+    | 'in_progress'
+    | 'completed'
+    | 'rejected'
+    | 'transferred';
   assignedAt: string;
   completedAt?: string | null;
   notes?: string | null;
+  sourceAssignmentId?: string | null;
+  transferReason?:
+    | 'offboarded'
+    | 'leave'
+    | 'capacity_rebalance'
+    | 'rework'
+    | 'manual'
+    | null;
 }
 
 export interface CreateAssignmentInput {
   operatorId?: string;
   assigneeId: string;
-  status?: 'assigned' | 'accepted' | 'completed' | 'rejected';
+  status?: 'assigned' | 'accepted' | 'in_progress' | 'completed' | 'rejected' | 'transferred';
   notes?: string;
+}
+
+export interface TransferAssignmentInput {
+  nextAssigneeId: string;
+  transferReason: 'offboarded' | 'leave' | 'capacity_rebalance' | 'rework' | 'manual';
+  notes?: string;
+}
+
+export interface TaskReview {
+  id: string;
+  taskItemId: string;
+  stage: 'qa' | 'algorithm_sampling';
+  decision: 'passed' | 'rejected';
+  reviewerId: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CreateTaskReviewInput {
+  stage: 'qa';
+  decision: 'passed' | 'rejected';
+  reviewerId: string;
+  notes?: string;
+}
+
+export interface TaskSettlementShare {
+  id: string;
+  settlementId: string;
+  assignmentId: string;
+  percentage: number;
+}
+
+export interface TaskSettlement {
+  id: string;
+  taskItemId: string;
+  decisionMode: 'single_owner' | 'split';
+  ownerAssignmentId?: string | null;
+  decidedBy: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shares: TaskSettlementShare[];
+}
+
+export interface CreateTaskSettlementInput {
+  decisionMode: 'single_owner' | 'split';
+  ownerAssignmentId?: string;
+  decidedBy: string;
+  decidedByRole: 'project_manager' | 'operations';
+  notes?: string;
+  shares?: Array<{
+    assignmentId: string;
+    percentage: number;
+  }>;
 }
 
 export interface DashboardOverview {
