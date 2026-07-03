@@ -6,7 +6,11 @@ export enum TaskItemStatusDto {
   PENDING_PICKUP = 'pending_pickup',
   IN_PROGRESS = 'in_progress',
   SUBMITTED = 'submitted',
-  RETURNED = 'returned'
+  QA_REJECTED = 'qa_rejected',
+  QA_PASSED = 'qa_passed',
+  DELIVERED = 'delivered',
+  SAMPLING_REJECTED = 'sampling_rejected',
+  SAMPLING_PASSED = 'sampling_passed'
 }
 
 export class CreateTaskDto {

@@ -5,6 +5,10 @@ export enum BatchStatusDto {
   DRAFT = 'draft',
   IN_PROGRESS = 'in_progress',
   READY_FOR_DELIVERY = 'ready_for_delivery',
+  DELIVERED = 'delivered',
+  PARTIALLY_REJECTED = 'partially_rejected',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
   CLOSED = 'closed'
 }
 

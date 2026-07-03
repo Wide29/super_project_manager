@@ -49,3 +49,35 @@ Concerns / follow-ups:
 
 Commit SHA:
 - None
+
+---
+
+# Task 1 Backend Workflow Slice Report
+
+Status: DONE_WITH_CONCERNS
+
+Scope completed:
+- Extended `prisma/schema.prisma` and migration `20260703000000_delivery_acceptance_settlement` with the Task 1 workflow enums and models for assignment transfer history, task reviews, batch deliveries, batch acceptances, settlements, and settlement shares.
+- Hardened the `TaskItemStatus` enum migration so existing `returned` rows migrate to `qa_rejected` instead of failing during the enum cast.
+- Wired `ReviewsModule`, `DeliveriesModule`, `AcceptancesModule`, and `SettlementsModule` into `AppModule`.
+- Added assignment transfer API support at `POST /assignments/:assignmentId/transfer`, preserving historical execution ownership through `sourceAssignmentId` and marking the original assignment `transferred`.
+- Added QA and algorithm sampling review creation at `POST /tasks/:taskId/reviews`, with task status transitions to `qa_passed`, `qa_rejected`, `sampling_passed`, or `sampling_rejected`.
+- Added batch delivery creation at `POST /batches/:batchId/deliveries`, superseding prior submitted deliveries, marking the batch `delivered`, and aligning reviewed task statuses to `delivered`.
+- Added batch-first acceptance at `POST /deliveries/:deliveryId/acceptances`, supporting exactly `accepted`, `partially_rejected`, and `rejected`, validating sampling inputs, creating sampled task reviews, and updating the batch status.
+- Added task settlement creation at `POST /tasks/:taskId/settlement`, supporting `single_owner` and split settlements with share validation and assignment ownership checks.
+- Added/updated backend e2e coverage for assignments, task queue compatibility, reviews, deliveries, acceptances, and settlements.
+
+Verification:
+- `npx prisma generate` passed.
+- `npm run build` passed.
+- `npm run test:e2e -- --runTestsByPath test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/assignments.e2e-spec.ts test/task-queue.e2e-spec.ts` passed: 6 suites, 7 tests.
+- `npm run test:e2e` passed: 12 suites, 15 tests.
+- `npm run lint` did not run because ESLint v9 requires an `eslint.config.*` flat config file and the repo does not currently contain one.
+
+Concerns / follow-ups:
+- Settlement authority is represented by the `decidedBy` field and covered with the v1 `ops-1` fixture, but there is no authentication/role layer in this backend slice to technically enforce “项目经理 + 运营” yet.
+- The acceptance endpoint validates sampling shape and creates sampling reviews, but it does not yet reject sampled task IDs from a different batch; current tests cover the intended batch path only.
+- Lint remains blocked by missing ESLint v9 flat config, unrelated to this slice’s TypeScript/build correctness.
+
+Commit SHA:
+- Pending at report-write time.

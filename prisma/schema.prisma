@@ -17,6 +17,10 @@ enum BatchStatus {
   draft
   in_progress
   ready_for_delivery
+  delivered
+  partially_rejected
+  accepted
+  rejected
   closed
 }
 
@@ -25,14 +29,54 @@ enum TaskItemStatus {
   pending_pickup
   in_progress
   submitted
-  returned
+  qa_rejected
+  qa_passed
+  delivered
+  sampling_rejected
+  sampling_passed
 }
 
 enum TaskAssignmentStatus {
   assigned
   accepted
+  in_progress
   completed
   rejected
+  transferred
+}
+
+enum TaskReviewStage {
+  qa
+  algorithm_sampling
+}
+
+enum TaskReviewDecision {
+  passed
+  rejected
+}
+
+enum BatchDeliveryStatus {
+  submitted
+  superseded
+}
+
+enum BatchAcceptanceDecision {
+  accepted
+  partially_rejected
+  rejected
+}
+
+enum TaskSettlementDecisionMode {
+  single_owner
+  split
+}
+
+enum TaskTransferReason {
+  offboarded
+  leave
+  capacity_rebalance
+  rework
+  manual
 }
 
 model Project {
@@ -58,6 +102,7 @@ model Batch {
   updatedAt        DateTime    @updatedAt
   project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks            TaskItem[]
+  deliveries       BatchDelivery[]
 
   @@index([projectId])
 }
@@ -74,20 +119,98 @@ model TaskItem {
   updatedAt    DateTime       @updatedAt
   batch        Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
   assignments  TaskAssignment[]
+  reviews      TaskReview[]
+  settlement   TaskSettlement?
 
   @@index([batchId])
 }
 
 model TaskAssignment {
-  id          String               @id @default(cuid())
-  taskItemId  String
-  operatorId  String?
-  assigneeId  String
-  status      TaskAssignmentStatus @default(assigned)
-  assignedAt  DateTime             @default(now())
-  completedAt DateTime?
-  notes       String?
-  taskItem    TaskItem             @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  id                    String               @id @default(cuid())
+  taskItemId            String
+  operatorId            String?
+  assigneeId            String
+  status                TaskAssignmentStatus @default(assigned)
+  assignedAt            DateTime             @default(now())
+  completedAt           DateTime?
+  notes                 String?
+  transferReason        TaskTransferReason?
+  sourceAssignmentId    String?
+  taskItem              TaskItem             @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  sourceAssignment      TaskAssignment?      @relation("TaskAssignmentTransfers", fields: [sourceAssignmentId], references: [id], onDelete: SetNull)
+  transferredToAssignments TaskAssignment[]  @relation("TaskAssignmentTransfers")
+  settlementShares      TaskSettlementShare[]
 
   @@index([taskItemId])
+  @@index([sourceAssignmentId])
+}
+
+model TaskReview {
+  id                String             @id @default(cuid())
+  taskItemId        String
+  stage             TaskReviewStage
+  decision          TaskReviewDecision
+  reviewerId        String
+  notes             String?
+  batchAcceptanceId String?
+  createdAt         DateTime           @default(now())
+  taskItem          TaskItem           @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  batchAcceptance   BatchAcceptance?   @relation(fields: [batchAcceptanceId], references: [id], onDelete: SetNull)
+
+  @@index([taskItemId])
+  @@index([batchAcceptanceId])
+}
+
+model BatchDelivery {
+  id          String              @id @default(cuid())
+  batchId      String
+  submittedBy  String
+  notes        String?
+  submittedAt  DateTime            @default(now())
+  status       BatchDeliveryStatus @default(submitted)
+  batch        Batch               @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  acceptances  BatchAcceptance[]
+
+  @@index([batchId])
+}
+
+model BatchAcceptance {
+  id         String                  @id @default(cuid())
+  deliveryId String
+  reviewedBy String
+  decision   BatchAcceptanceDecision
+  sampleSize Int
+  notes      String?
+  reviewedAt DateTime                @default(now())
+  delivery   BatchDelivery           @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  reviews    TaskReview[]
+
+  @@index([deliveryId])
+}
+
+model TaskSettlement {
+  id                String                      @id @default(cuid())
+  taskItemId        String                      @unique
+  decisionMode      TaskSettlementDecisionMode
+  ownerAssignmentId String?
+  decidedBy         String
+  notes             String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  taskItem          TaskItem                    @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  shares            TaskSettlementShare[]
+
+  @@index([ownerAssignmentId])
+}
+
+model TaskSettlementShare {
+  id           String         @id @default(cuid())
+  settlementId String
+  assignmentId String
+  percentage   Int
+  settlement   TaskSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  assignment   TaskAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([settlementId])
+  @@index([assignmentId])
 }

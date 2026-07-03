@@ -4,8 +4,10 @@ import { IsEnum, IsOptional, IsString } from 'class-validator';
 export enum TaskAssignmentStatusDto {
   ASSIGNED = 'assigned',
   ACCEPTED = 'accepted',
+  IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
-  REJECTED = 'rejected'
+  REJECTED = 'rejected',
+  TRANSFERRED = 'transferred'
 }
 
 export class CreateAssignmentDto {
