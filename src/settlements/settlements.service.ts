@@ -24,6 +24,10 @@ export class SettlementsService {
         throw new BadRequestException('shares are required for split settlements');
       }
 
+      if (new Set(dto.shares.map((share) => share.assignmentId)).size !== dto.shares.length) {
+        throw new BadRequestException('split settlement shares must not repeat assignments');
+      }
+
       const totalShare = dto.shares.reduce((sum, share) => sum + share.percentage, 0);
       if (totalShare !== 100) {
         throw new BadRequestException('split settlement shares must total 100');

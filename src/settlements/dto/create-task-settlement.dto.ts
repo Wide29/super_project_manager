@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayUnique,
   IsArray,
   IsEnum,
   IsInt,
@@ -14,6 +15,11 @@ import {
 export enum TaskSettlementDecisionModeDto {
   SINGLE_OWNER = 'single_owner',
   SPLIT = 'split'
+}
+
+export enum TaskSettlementDeciderRoleDto {
+  PROJECT_MANAGER = 'project_manager',
+  OPERATIONS = 'operations'
 }
 
 class TaskSettlementShareDto {
@@ -51,7 +57,12 @@ export class CreateTaskSettlementDto {
   @ApiProperty({ type: [TaskSettlementShareDto], required: false })
   @IsOptional()
   @IsArray()
+  @ArrayUnique((share: TaskSettlementShareDto) => share.assignmentId)
   @ValidateNested({ each: true })
   @Type(() => TaskSettlementShareDto)
   shares?: TaskSettlementShareDto[];
+
+  @ApiProperty({ enum: TaskSettlementDeciderRoleDto })
+  @IsEnum(TaskSettlementDeciderRoleDto)
+  decidedByRole!: 'project_manager' | 'operations';
 }

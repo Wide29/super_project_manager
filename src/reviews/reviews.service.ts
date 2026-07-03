@@ -19,8 +19,7 @@ export class ReviewsService {
         stage: dto.stage,
         decision: dto.decision,
         reviewerId: dto.reviewerId,
-        notes: dto.notes,
-        batchAcceptanceId: dto.batchAcceptanceId
+        notes: dto.notes
       }
     });
 

@@ -68,4 +68,59 @@ describe('Acceptances API', () => {
 
     expect(response.body.decision).toBe('partially_rejected');
   });
+
+  it('rejects sampled tasks that do not belong to the delivery batch', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/projects')
+      .send({
+        name: 'Cross Batch Acceptance Project',
+        taskType: 'judge'
+      })
+      .expect(201);
+
+    const batchOne = await request(app.getHttpServer())
+      .post(`/projects/${project.body.id}/batches`)
+      .send({ name: 'Acceptance Batch One' })
+      .expect(201);
+
+    const batchTwo = await request(app.getHttpServer())
+      .post(`/projects/${project.body.id}/batches`)
+      .send({ name: 'Acceptance Batch Two' })
+      .expect(201);
+
+    const taskOne = await request(app.getHttpServer())
+      .post(`/batches/${batchOne.body.id}/tasks`)
+      .send({
+        title: 'Task In Batch One',
+        status: 'qa_passed',
+        inputPayload: { title: 'Task In Batch One' }
+      })
+      .expect(201);
+
+    const foreignTask = await request(app.getHttpServer())
+      .post(`/batches/${batchTwo.body.id}/tasks`)
+      .send({
+        title: 'Task In Batch Two',
+        status: 'qa_passed',
+        inputPayload: { title: 'Task In Batch Two' }
+      })
+      .expect(201);
+
+    const delivery = await request(app.getHttpServer())
+      .post(`/batches/${batchOne.body.id}/deliveries`)
+      .send({
+        submittedBy: 'ops-1'
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/deliveries/${delivery.body.id}/acceptances`)
+      .send({
+        reviewedBy: 'algo-1',
+        decision: 'accepted',
+        sampleSize: 2,
+        sampledTaskIds: [taskOne.body.id, foreignTask.body.id]
+      })
+      .expect(400);
+  });
 });

@@ -81,3 +81,40 @@ Concerns / follow-ups:
 
 Commit SHA:
 - `e1132b8 feat: add delivery acceptance workflow backend`
+
+---
+
+# Task 1 Review Fix Wave
+
+Status: DONE
+
+Files changed:
+- `src/acceptances/acceptances.module.ts`
+- `src/acceptances/acceptances.service.ts`
+- `src/reviews/dto/create-task-review.dto.ts`
+- `src/reviews/reviews.service.ts`
+- `src/settlements/dto/create-task-settlement.dto.ts`
+- `src/settlements/settlements.service.ts`
+- `test/acceptances.e2e-spec.ts`
+- `test/settlements.e2e-spec.ts`
+
+Commands run and results:
+- `npm run test:e2e -- --runTestsByPath test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts`
+  - Passed: `2` suites, `4` tests
+  - Covered cross-batch sampled task rejection and settlement decider role validation
+- `npm run build`
+  - Passed
+- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
+  - Passed: `6` suites, `9` tests
+
+Fix summary:
+- Acceptance creation is now transactional, so sampled reviews and batch status updates cannot leave partial acceptance rows behind.
+- Acceptance now rejects `sampledTaskIds` that do not belong to the delivered batch.
+- Public task review creation no longer accepts `batchAcceptanceId`; sampled review linkage is now internal to the acceptance workflow.
+- Settlement DTO now requires `decidedByRole` to be one of `project_manager` or `operations`, and split shares reject duplicate assignment entries.
+
+Concerns / follow-ups:
+- Role enforcement remains DTO-level until a real auth layer exists, which is the intended v1 boundary for this backend slice.
+
+Commit SHA:
+- Pending fix commit

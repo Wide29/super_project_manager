@@ -64,6 +64,7 @@ describe('Settlements API', () => {
       .send({
         decisionMode: 'split',
         decidedBy: 'ops-1',
+        decidedByRole: 'operations',
         shares: [
           { assignmentId: originalAssignment.body.id, percentage: 40 },
           { assignmentId: transferredAssignment.body.id, percentage: 60 }
@@ -72,5 +73,45 @@ describe('Settlements API', () => {
       .expect(201);
 
     expect(response.body.decisionMode).toBe('split');
+  });
+
+  it('rejects settlements without an allowed decider role', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/projects')
+      .send({
+        name: 'Settlement Role Project',
+        taskType: 'judge'
+      })
+      .expect(201);
+
+    const batch = await request(app.getHttpServer())
+      .post(`/projects/${project.body.id}/batches`)
+      .send({ name: 'Settlement Role Batch' })
+      .expect(201);
+
+    const task = await request(app.getHttpServer())
+      .post(`/batches/${batch.body.id}/tasks`)
+      .send({
+        title: 'Settlement role task',
+        inputPayload: { prompt: 'role check' }
+      })
+      .expect(201);
+
+    const assignment = await request(app.getHttpServer())
+      .post(`/tasks/${task.body.id}/assignments`)
+      .send({
+        assigneeId: 'annotator-role'
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/tasks/${task.body.id}/settlement`)
+      .send({
+        decisionMode: 'single_owner',
+        decidedBy: 'vendor-manager-1',
+        decidedByRole: 'vendor_manager',
+        ownerAssignmentId: assignment.body.id
+      })
+      .expect(400);
   });
 });

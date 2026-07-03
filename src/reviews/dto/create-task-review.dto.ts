@@ -28,9 +28,4 @@ export class CreateTaskReviewDto {
   @IsOptional()
   @IsString()
   notes?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  batchAcceptanceId?: string;
 }
