@@ -8,6 +8,10 @@ export function chatWithAssistant(message: string, context?: string) {
   });
 }
 
+export function getDeliverySuggestion(message: string, context: string) {
+  return chatWithAssistant(message, context);
+}
+
 export function getTaskSuggestion(taskId: string, prompt?: string) {
   return apiFetch<TaskSuggestionResponse>('/ai/task-suggestion', {
     method: 'POST',

@@ -195,3 +195,9 @@ test('任务详情页支持转交、质检和结算裁定', async ({ page, reque
   await expect(page.getByText('single_owner')).toBeVisible();
   await expect(page.getByText('100%')).toBeVisible();
 });
+
+test('角色工作台支持 AI 建议生成与备注填入', async ({ page }) => {
+  await page.goto('/qa-delivery');
+  await expect(page.getByRole('button', { name: '生成质检建议' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '填入质检备注' })).toBeVisible();
+});

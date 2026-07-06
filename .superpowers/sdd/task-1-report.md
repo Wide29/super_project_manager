@@ -1,212 +1,34 @@
-# Task 1 Report
+# Task 1 Report: Build Shared Workbench Agent Card And AI Helpers
 
-Status: DONE
+## Implemented
 
-Files changed:
-- `src/tasks/dto/import-tasks.dto.ts`
-- `src/tasks/tasks.controller.ts`
-- `src/tasks/tasks.service.ts`
-- `test/task-import.e2e-spec.ts`
+- Added `getDeliverySuggestion(message, context)` in [apps/web/lib/api/ai.ts](/Users/zhaojiaxiang/codex0/project_manager/apps/web/lib/api/ai.ts:11) as a thin wrapper over the existing `/ai/chat` proxy path.
+- Created the reusable client-side `WorkbenchAgentCard` in [apps/web/components/ai/workbench-agent-card.tsx](/Users/zhaojiaxiang/codex0/project_manager/apps/web/components/ai/workbench-agent-card.tsx:1) with:
+  - loading and error states
+  - empty-state hint text
+  - optional insert action
+  - advisory-only draft rendering
+- Added the Task 1 browser expectation in [apps/web/tests/workflow-ops.spec.ts](/Users/zhaojiaxiang/codex0/project_manager/apps/web/tests/workflow-ops.spec.ts:199) to assert the QA delivery workbench will expose the AI suggestion and insert buttons once the later integration lands.
 
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/task-import.e2e-spec.ts`
-  - First run failed with `404 Not Found` on `POST /batches/:batchId/tasks/import`, which confirmed the route was still missing.
-  - Second run passed after implementing the DTO, controller route, and service method.
-- `npm run test:e2e -- --runTestsByPath test/tasks.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed for both existing suites, confirming no regression in batch task or task queue behavior.
+## Tested
 
-Concerns / follow-ups:
-- No open concerns for this slice.
+- `npm run build --workspace web`
+  - Result: PASS
+- `npm run test:e2e --workspace web -- --grep "角色工作台支持 AI 建议生成与备注填入"`
+  - Result: FAIL as expected at this task stage
+  - Reason: `/qa-delivery` does not yet mount the shared AI card, so the new button expectation is currently red by design.
 
-Commit SHA:
-- `01e60d8dd2f6a00789bbaea19bdc07270ca66150`
+## TDD Evidence
 
----
+- The new browser expectation is present at [apps/web/tests/workflow-ops.spec.ts:199-203](/Users/zhaojiaxiang/codex0/project_manager/apps/web/tests/workflow-ops.spec.ts:199), matching the brief's red-first step for Task 1.
 
-# Task 1 Fix Wave Report
+## Self-Review
 
-Status: DONE
+- The shared card is client-only and keeps AI advisory rather than auto-submitting anything.
+- `WorkbenchAgentCard` uses `ReactElement` instead of `JSX.Element` so the Next build typecheck passes in this repository.
+- `getDeliverySuggestion` preserves the existing backend proxy boundary and does not add any new endpoint.
 
-Files changed:
-- `src/tasks/tasks.service.ts`
-- `test/task-import.e2e-spec.ts`
+## Concerns
 
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/task-import.e2e-spec.ts`
-  - Passed: `1` suite, `3` tests
-  - Covered happy-path import summary shape, validation failure feedback, and missing-batch `404`
-- `npm run test:e2e -- --runTestsByPath test/tasks.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed: `2` suites, `2` tests
-  - Confirmed no regression in existing task creation/list and queue/submit flows
-
-Implementation notes:
-- Switched batch import persistence to `prisma.$transaction(...)` so the endpoint is atomic and cannot partially persist rows if a create in the batch fails.
-- Expanded e2e coverage for the import endpoint to assert validation feedback on invalid payloads and `404` behavior when the target batch is missing.
-- Tightened the happy-path e2e to assert the returned `tasks` summary entries contain the expected `id` and `title` shape.
-
-Concerns / follow-ups:
-- No remaining concerns for this fix wave.
-
-Commit SHA:
-- None
-
----
-
-# Task 1 Backend Workflow Slice Report
-
-Status: DONE_WITH_CONCERNS
-
-Scope completed:
-- Extended `prisma/schema.prisma` and migration `20260703000000_delivery_acceptance_settlement` with the Task 1 workflow enums and models for assignment transfer history, task reviews, batch deliveries, batch acceptances, settlements, and settlement shares.
-- Hardened the `TaskItemStatus` enum migration so existing `returned` rows migrate to `qa_rejected` instead of failing during the enum cast.
-- Wired `ReviewsModule`, `DeliveriesModule`, `AcceptancesModule`, and `SettlementsModule` into `AppModule`.
-- Added assignment transfer API support at `POST /assignments/:assignmentId/transfer`, preserving historical execution ownership through `sourceAssignmentId` and marking the original assignment `transferred`.
-- Added QA and algorithm sampling review creation at `POST /tasks/:taskId/reviews`, with task status transitions to `qa_passed`, `qa_rejected`, `sampling_passed`, or `sampling_rejected`.
-- Added batch delivery creation at `POST /batches/:batchId/deliveries`, superseding prior submitted deliveries, marking the batch `delivered`, and aligning reviewed task statuses to `delivered`.
-- Added batch-first acceptance at `POST /deliveries/:deliveryId/acceptances`, supporting exactly `accepted`, `partially_rejected`, and `rejected`, validating sampling inputs, creating sampled task reviews, and updating the batch status.
-- Added task settlement creation at `POST /tasks/:taskId/settlement`, supporting `single_owner` and split settlements with share validation and assignment ownership checks.
-- Added/updated backend e2e coverage for assignments, task queue compatibility, reviews, deliveries, acceptances, and settlements.
-
-Verification:
-- `npx prisma generate` passed.
-- `npm run build` passed.
-- `npm run test:e2e -- --runTestsByPath test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/assignments.e2e-spec.ts test/task-queue.e2e-spec.ts` passed: 6 suites, 7 tests.
-- `npm run test:e2e` passed: 12 suites, 15 tests.
-- `npm run lint` did not run because ESLint v9 requires an `eslint.config.*` flat config file and the repo does not currently contain one.
-
-Concerns / follow-ups:
-- Settlement authority is represented by the `decidedBy` field and covered with the v1 `ops-1` fixture, but there is no authentication/role layer in this backend slice to technically enforce “项目经理 + 运营” yet.
-- The acceptance endpoint validates sampling shape and creates sampling reviews, but it does not yet reject sampled task IDs from a different batch; current tests cover the intended batch path only.
-- Lint remains blocked by missing ESLint v9 flat config, unrelated to this slice’s TypeScript/build correctness.
-
-Commit SHA:
-- `e1132b8 feat: add delivery acceptance workflow backend`
-
----
-
-# Task 1 Review Fix Wave
-
-Status: DONE
-
-Files changed:
-- `src/acceptances/acceptances.module.ts`
-- `src/acceptances/acceptances.service.ts`
-- `src/reviews/dto/create-task-review.dto.ts`
-- `src/reviews/reviews.service.ts`
-- `src/settlements/dto/create-task-settlement.dto.ts`
-- `src/settlements/settlements.service.ts`
-- `test/acceptances.e2e-spec.ts`
-- `test/settlements.e2e-spec.ts`
-
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts`
-  - Passed: `2` suites, `4` tests
-  - Covered cross-batch sampled task rejection and settlement decider role validation
-- `npm run build`
-  - Passed
-- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed: `6` suites, `9` tests
-
-Fix summary:
-- Acceptance creation is now transactional, so sampled reviews and batch status updates cannot leave partial acceptance rows behind.
-- Acceptance now rejects `sampledTaskIds` that do not belong to the delivered batch.
-- Public task review creation no longer accepts `batchAcceptanceId`; sampled review linkage is now internal to the acceptance workflow.
-- Settlement DTO now requires `decidedByRole` to be one of `project_manager` or `operations`, and split shares reject duplicate assignment entries.
-
-Concerns / follow-ups:
-- Role enforcement remains DTO-level until a real auth layer exists, which is the intended v1 boundary for this backend slice.
-
-Commit SHA:
-- Pending fix commit
-
----
-
-# Task 1 Review Fix Wave 4
-
-Status: DONE
-
-Files changed:
-- `src/acceptances/acceptances.service.ts`
-- `test/acceptances.e2e-spec.ts`
-
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/acceptances.e2e-spec.ts`
-  - Passed: `1` suite, `5` tests
-  - Added coverage that the same delivery cannot be accepted twice
-- `npm run build`
-  - Passed
-- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed: `6` suites, `12` tests
-
-Fix summary:
-- Formal batch acceptance is now one-shot per delivery.
-- Once a delivery has one acceptance record, subsequent attempts against the same delivery are rejected with `400`.
-
-Concerns / follow-ups:
-- Remaining reviewer notes are minor only: settlement role is not yet persisted for audit, and repeated transfer lineage could be tightened later if the business wants single-successor enforcement.
-
-Commit SHA:
-- Pending fix commit
-
----
-
-# Task 1 Review Fix Wave 3
-
-Status: DONE
-
-Files changed:
-- `src/acceptances/acceptances.service.ts`
-- `test/acceptances.e2e-spec.ts`
-
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/acceptances.e2e-spec.ts`
-  - Passed: `1` suite, `4` tests
-  - Added coverage that superseded deliveries cannot be accepted
-- `npm run build`
-  - Passed
-- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed: `6` suites, `11` tests
-
-Fix summary:
-- Acceptance creation now rejects deliveries that are no longer in `submitted` state.
-- Superseded deliveries can no longer overwrite the batch acceptance result after a newer delivery has been issued.
-
-Concerns / follow-ups:
-- No blocking concerns remain for the Task 1 backend slice.
-
-Commit SHA:
-- Pending fix commit
-
----
-
-# Task 1 Review Fix Wave 2
-
-Status: DONE
-
-Files changed:
-- `src/acceptances/acceptances.service.ts`
-- `src/reviews/dto/create-task-review.dto.ts`
-- `src/reviews/reviews.service.ts`
-- `test/acceptances.e2e-spec.ts`
-
-Commands run and results:
-- `npm run test:e2e -- --runTestsByPath test/reviews.e2e-spec.ts test/acceptances.e2e-spec.ts`
-  - Passed: `2` suites, `4` tests
-  - Covered QA-only public review flow plus acceptance decision consistency rules
-- `npm run build`
-  - Passed
-- `npm run test:e2e -- --runTestsByPath test/assignments.e2e-spec.ts test/reviews.e2e-spec.ts test/deliveries.e2e-spec.ts test/acceptances.e2e-spec.ts test/settlements.e2e-spec.ts test/task-queue.e2e-spec.ts`
-  - Passed: `6` suites, `10` tests
-
-Fix summary:
-- Public `POST /tasks/:taskId/reviews` is now QA-only and no longer allows direct `algorithm_sampling` writes.
-- Acceptance validation now enforces semantic consistency between `decision` and the rejected sample set:
-  - `accepted` cannot include rejected tasks
-  - `partially_rejected` must include at least one rejected task and at least one accepted sampled task
-  - `rejected` must reject every sampled task
-
-Concerns / follow-ups:
-- `decidedByRole` is still not persisted in the settlement record; this remains a minor audit gap until the auth/actor model arrives in later tasks.
-
-Commit SHA:
-- Pending fix commit
+- The added e2e test is intentionally red until Task 2 wires the shared card into the QA/Delivery workbench.
+- The current task scope does not include page integration, so button visibility is not yet achievable from this file set alone.
