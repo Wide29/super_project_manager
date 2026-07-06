@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createBatchAcceptance } from '../../lib/api/acceptances';
 import type {
   BatchAcceptance,
@@ -48,13 +48,24 @@ export function BatchAcceptanceForm({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const availableDeliveries = deliveries.filter((delivery) => delivery.status === 'submitted');
+  const availableDeliveries = useMemo(
+    () => deliveries.filter((delivery) => delivery.status === 'submitted'),
+    [deliveries]
+  );
+  const deliverySetKey = useMemo(
+    () => deliveries.map((delivery) => `${delivery.id}:${delivery.status}`).join('|'),
+    [deliveries]
+  );
+  const availableDeliveryIdsKey = useMemo(
+    () => availableDeliveries.map((delivery) => delivery.id).join('|'),
+    [availableDeliveries]
+  );
 
   useEffect(() => {
     setForm(createInitialForm(deliveries));
     setMessage('');
     setError('');
-  }, [deliveries]);
+  }, [deliverySetKey]);
 
   useEffect(() => {
     if (availableDeliveries.length === 0) {
@@ -74,7 +85,7 @@ export function BatchAcceptanceForm({
         rejectedTaskIds: []
       };
     });
-  }, [deliveries, availableDeliveries]);
+  }, [deliverySetKey, availableDeliveries, availableDeliveryIdsKey, deliveries]);
 
   useEffect(() => {
     if (!externalNotesDraft) return;

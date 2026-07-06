@@ -49,6 +49,10 @@ export function AlgorithmWorkbench({
       pendingDeliveries.find((record) => record.delivery.id === selectedDeliveryId) ?? null,
     [pendingDeliveries, selectedDeliveryId]
   );
+  const selectedDeliveries = useMemo(
+    () => (selectedRecord ? [selectedRecord.delivery] : []),
+    [selectedRecord]
+  );
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -163,7 +167,7 @@ export function AlgorithmWorkbench({
               />
               <BatchAcceptanceForm
                 key={selectedRecord.delivery.id}
-                deliveries={[selectedRecord.delivery]}
+                deliveries={selectedDeliveries}
                 tasks={selectedRecord.tasks}
                 externalNotesDraft={acceptanceDraft}
               />

@@ -350,11 +350,19 @@ test('角色工作台支持 AI 建议生成与备注填入', async ({ page, requ
     .getByRole('region', { name: 'AI 验收助手', exact: true })
     .last();
   await page.getByRole('button', { name: new RegExp(deliveryNoteOne) }).first().click();
+  await page.getByLabel('验收人 ID').fill('algo-reviewer-1');
+  await page.getByLabel('验收结论').selectOption('partially_rejected');
+  await page.locator('input[aria-label^="抽检题目 "]').first().check();
+  await page.locator('input[aria-label^="打回题目 "]').first().check();
   await algorithmAgentCard.getByRole('button', { name: '生成验收建议' }).click();
   await expect(algorithmAgentCard.getByText(algorithmDraftOne)).toBeVisible();
   await expect(algorithmAgentCard.getByRole('button', { name: '填入验收备注' })).toBeVisible();
 
   await algorithmAgentCard.getByRole('button', { name: '填入验收备注' }).click();
+  await expect(page.getByLabel('验收人 ID')).toHaveValue('algo-reviewer-1');
+  await expect(page.getByLabel('验收结论')).toHaveValue('partially_rejected');
+  await expect(page.locator('input[aria-label^="抽检题目 "]').first()).toBeChecked();
+  await expect(page.locator('input[aria-label^="打回题目 "]').first()).toBeChecked();
   await expect(page.getByLabel('验收备注')).toHaveValue(algorithmDraftOne);
 
   await page.getByRole('button', { name: new RegExp(deliveryNoteTwo) }).first().click();
