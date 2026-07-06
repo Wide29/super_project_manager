@@ -177,6 +177,7 @@ export function QaDeliveryWorkbench({
                 </pre>
               </div>
               <WorkbenchAgentCard
+                key={selectedTask.taskId}
                 title="AI 质检助手"
                 description="为当前题目生成风险提示、结论倾向和备注草稿。"
                 actionLabel="生成质检建议"

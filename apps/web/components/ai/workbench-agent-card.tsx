@@ -45,6 +45,7 @@ export function WorkbenchAgentCard({
   async function handleGenerate() {
     if (disabled) return;
 
+    setDraft('');
     setLoading(true);
     setError('');
 
@@ -59,7 +60,10 @@ export function WorkbenchAgentCard({
   }
 
   return (
-    <div className="rounded-panel border border-panelLine bg-white p-6 shadow-panel">
+    <section
+      aria-label={title}
+      className="rounded-panel border border-panelLine bg-white p-6 shadow-panel"
+    >
       <h3 className="text-lg font-semibold text-slateDeep">{title}</h3>
       <p className="mt-2 text-sm text-slate-500">{description}</p>
 
@@ -92,6 +96,6 @@ export function WorkbenchAgentCard({
       ) : (
         <p className="mt-4 text-sm text-slate-500">{emptyHint}</p>
       )}
-    </div>
+    </section>
   );
 }

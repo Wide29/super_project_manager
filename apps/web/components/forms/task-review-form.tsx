@@ -32,6 +32,12 @@ export function TaskReviewForm({
   const [error, setError] = useState('');
 
   useEffect(() => {
+    setForm(INITIAL_FORM);
+    setMessage('');
+    setError('');
+  }, [taskId]);
+
+  useEffect(() => {
     if (!externalNotesDraft) return;
 
     setForm((current) => ({ ...current, notes: externalNotesDraft }));

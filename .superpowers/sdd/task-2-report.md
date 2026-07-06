@@ -105,3 +105,39 @@ npm run test:e2e --workspace web
 
 - Full Playwright coverage for `apps/web` is not green because of one pre-existing failure in `apps/web/tests/project-batch-forms.spec.ts`, outside the Task 2 ownership boundary.
 - The AI workflow e2e test must stub `/api/ai/task-suggestion` and `/api/ai/chat`; otherwise it depends on external AI availability and environment configuration.
+
+## Review Follow-Up: Stale Draft Fix Wave
+
+### Additional changes implemented
+
+- Prevented stale AI card state from surviving selected-record changes by remounting `WorkbenchAgentCard` with record-specific keys in both workbenches.
+- Cleared stale in-card draft state before every new generation attempt in `WorkbenchAgentCard`, so a failed refresh cannot leave the old insertable draft behind.
+- Added an accessible region label to `WorkbenchAgentCard` so Playwright can scope directly to the intended AI card.
+- Strengthened `apps/web/tests/workflow-ops.spec.ts`:
+  - it now uses record-specific AI stub responses
+  - it asserts exact inserted stub text for QA and algorithm notes
+  - it verifies the old suggestion text and old insert button disappear after switching to another selected record
+
+### Additional TDD evidence
+
+1. Expanded the AI workbench e2e first to assert exact inserted text and stale-draft disappearance after switching records.
+2. Ran the focused test before the fix and observed the intended failure:
+   - old QA draft remained visible/insertable after switching to another selected task
+3. Applied the minimal production fix:
+   - keyed remounts for the AI cards
+   - `setDraft('')` before each generation
+4. Re-ran the same focused test and confirmed it passed.
+
+### Additional tests run
+
+```bash
+npm run test:e2e --workspace web -- --grep "角色工作台支持 AI 建议生成与备注填入"
+```
+
+- Result: PASS
+
+```bash
+npm run test:e2e --workspace web -- --grep "角色工作台支持 AI 建议生成与备注填入|角色工作台支持直接质检、交付与算法验收|侧边栏可进入质检交付台与算法验收台"
+```
+
+- Result: PASS

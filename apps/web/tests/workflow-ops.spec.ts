@@ -196,23 +196,43 @@ test('任务详情页支持转交、质检和结算裁定', async ({ page, reque
 });
 
 test('角色工作台支持 AI 建议生成与备注填入', async ({ page, request }) => {
+  let qaTaskOneId = '';
+  let qaTaskTwoId = '';
+  let qaDraftOne = '';
+  let qaDraftTwo = '';
+  let algorithmDraftOne = '';
+  let algorithmDraftTwo = '';
+  const deliveryNoteOne = `AI 验收交付说明 A ${Date.now()}`;
+  const deliveryNoteTwo = `AI 验收交付说明 B ${Date.now()}`;
+
   await page.route('**/api/ai/task-suggestion', async (route) => {
+    const payload = route.request().postDataJSON() as { taskId?: string };
+    const suggestion =
+      payload.taskId === qaTaskOneId
+        ? qaDraftOne
+        : payload.taskId === qaTaskTwoId
+          ? qaDraftTwo
+          : '未命中任务的默认质检建议';
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        suggestion: 'AI 质检建议：关注题意完整性。建议结论仅供人工参考。质检备注草稿：题目表达清晰，可进入通过复核。'
-      })
+      body: JSON.stringify({ suggestion })
     });
   });
 
   await page.route('**/api/ai/chat', async (route) => {
+    const payload = route.request().postDataJSON() as { context?: string };
+    const answer = payload.context?.includes(deliveryNoteOne)
+      ? algorithmDraftOne
+      : payload.context?.includes(deliveryNoteTwo)
+        ? algorithmDraftTwo
+        : '未命中交付的默认验收建议';
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        answer: 'AI 验收建议：优先抽检边界样本。建议结论仅供人工参考。验收备注草稿：已抽检关键题目，当前交付可先按通过处理。'
-      })
+      body: JSON.stringify({ answer })
     });
   });
 
@@ -234,12 +254,29 @@ test('角色工作台支持 AI 建议生成与备注填入', async ({ page, requ
   expect(batchResponse.ok()).toBeTruthy();
   const batch = await batchResponse.json();
 
-  const qaTaskTitle = `AI 质检题目 ${Date.now()}`;
-  const readyTaskTitle = `AI 验收题目 ${Date.now()}`;
+  const secondBatchResponse = await request.post(`http://localhost:3000/projects/${project.id}/batches`, {
+    data: {
+      name: `AI Workbench 第二批次 ${Date.now()}`,
+      plannedTaskCount: 1
+    }
+  });
+  expect(secondBatchResponse.ok()).toBeTruthy();
+  const secondBatch = await secondBatchResponse.json();
+
+  const qaTaskTitleOne = `AI 质检题目 A ${Date.now()}`;
+  const qaTaskTitleTwo = `AI 质检题目 B ${Date.now()}`;
+  const readyTaskTitleOne = `AI 验收题目 A ${Date.now()}`;
+  const readyTaskTitleTwo = `AI 验收题目 B ${Date.now()}`;
+
+  qaDraftOne = 'AI 质检建议 A：关注题意完整性。建议结论仅供人工参考。质检备注草稿：题目 A 可进入通过复核。';
+  qaDraftTwo = 'AI 质检建议 B：关注约束覆盖。建议结论仅供人工参考。质检备注草稿：题目 B 需补充边界检查。';
+  algorithmDraftOne = 'AI 验收建议 A：优先抽检边界样本。建议结论仅供人工参考。验收备注草稿：交付 A 可先按通过处理。';
+  algorithmDraftTwo = 'AI 验收建议 B：重点复核异常模式。建议结论仅供人工参考。验收备注草稿：交付 B 需补充复核记录。';
 
   for (const payload of [
-    { title: qaTaskTitle, status: 'submitted' },
-    { title: readyTaskTitle, status: 'qa_passed' }
+    { title: qaTaskTitleOne, status: 'submitted' },
+    { title: qaTaskTitleTwo, status: 'submitted' },
+    { title: readyTaskTitleOne, status: 'qa_passed' }
   ]) {
     const taskResponse = await request.post(`http://localhost:3000/batches/${batch.id}/tasks`, {
       data: {
@@ -251,27 +288,81 @@ test('角色工作台支持 AI 建议生成与备注填入', async ({ page, requ
       }
     });
     expect(taskResponse.ok()).toBeTruthy();
+    const task = await taskResponse.json();
+
+    if (payload.title === qaTaskTitleOne) {
+      qaTaskOneId = task.id;
+    }
+
+    if (payload.title === qaTaskTitleTwo) {
+      qaTaskTwoId = task.id;
+    }
   }
 
-  const deliveryResponse = await request.post(`http://localhost:3000/batches/${batch.id}/deliveries`, {
+  const secondBatchTaskResponse = await request.post(`http://localhost:3000/batches/${secondBatch.id}/tasks`, {
     data: {
-      submittedBy: 'ops-ai',
-      notes: `AI 验收交付说明 ${Date.now()}`
+      title: readyTaskTitleTwo,
+      status: 'qa_passed',
+      inputPayload: {
+        question: readyTaskTitleTwo
+      }
     }
   });
-  expect(deliveryResponse.ok()).toBeTruthy();
+  expect(secondBatchTaskResponse.ok()).toBeTruthy();
+
+  const deliveryResponseOne = await request.post(`http://localhost:3000/batches/${batch.id}/deliveries`, {
+    data: {
+      submittedBy: 'ops-ai',
+      notes: deliveryNoteOne
+    }
+  });
+  expect(deliveryResponseOne.ok()).toBeTruthy();
+
+  const deliveryResponseTwo = await request.post(`http://localhost:3000/batches/${secondBatch.id}/deliveries`, {
+    data: {
+      submittedBy: 'ops-ai',
+      notes: deliveryNoteTwo
+    }
+  });
+  expect(deliveryResponseTwo.ok()).toBeTruthy();
 
   await page.goto('/qa-delivery');
-  await page.getByRole('button', { name: '生成质检建议' }).click();
-  await expect(page.getByRole('button', { name: '填入质检备注' })).toBeVisible();
+  const qaAgentCard = page.getByRole('region', { name: 'AI 质检助手', exact: true }).last();
+  await page.getByRole('button', { name: new RegExp(`${qaTaskTitleOne}.*${project.name}`) }).click();
+  await qaAgentCard.getByRole('button', { name: '生成质检建议' }).click();
+  await expect(qaAgentCard.getByText(qaDraftOne)).toBeVisible();
+  await expect(qaAgentCard.getByRole('button', { name: '填入质检备注' })).toBeVisible();
 
-  await page.getByRole('button', { name: '填入质检备注' }).click();
-  await expect(page.getByLabel('质检备注')).not.toHaveValue('');
+  await qaAgentCard.getByRole('button', { name: '填入质检备注' }).click();
+  await expect(page.getByLabel('质检备注')).toHaveValue(qaDraftOne);
+
+  await page.getByRole('button', { name: new RegExp(`${qaTaskTitleTwo}.*${project.name}`) }).click();
+  await expect(qaAgentCard.getByText(qaDraftOne)).toHaveCount(0);
+  await expect(qaAgentCard.getByRole('button', { name: '填入质检备注' })).toHaveCount(0);
+
+  await qaAgentCard.getByRole('button', { name: '生成质检建议' }).click();
+  await expect(qaAgentCard.getByText(qaDraftTwo)).toBeVisible();
+  await qaAgentCard.getByRole('button', { name: '填入质检备注' }).click();
+  await expect(page.getByLabel('质检备注')).toHaveValue(qaDraftTwo);
 
   await page.goto('/algorithm');
-  await page.getByRole('button', { name: '生成验收建议' }).click();
-  await expect(page.getByRole('button', { name: '填入验收备注' })).toBeVisible();
+  const algorithmAgentCard = page
+    .getByRole('region', { name: 'AI 验收助手', exact: true })
+    .last();
+  await page.getByRole('button', { name: new RegExp(deliveryNoteOne) }).first().click();
+  await algorithmAgentCard.getByRole('button', { name: '生成验收建议' }).click();
+  await expect(algorithmAgentCard.getByText(algorithmDraftOne)).toBeVisible();
+  await expect(algorithmAgentCard.getByRole('button', { name: '填入验收备注' })).toBeVisible();
 
-  await page.getByRole('button', { name: '填入验收备注' }).click();
-  await expect(page.getByLabel('验收备注')).not.toHaveValue('');
+  await algorithmAgentCard.getByRole('button', { name: '填入验收备注' }).click();
+  await expect(page.getByLabel('验收备注')).toHaveValue(algorithmDraftOne);
+
+  await page.getByRole('button', { name: new RegExp(deliveryNoteTwo) }).first().click();
+  await expect(algorithmAgentCard.getByText(algorithmDraftOne)).toHaveCount(0);
+  await expect(algorithmAgentCard.getByRole('button', { name: '填入验收备注' })).toHaveCount(0);
+
+  await algorithmAgentCard.getByRole('button', { name: '生成验收建议' }).click();
+  await expect(algorithmAgentCard.getByText(algorithmDraftTwo)).toBeVisible();
+  await algorithmAgentCard.getByRole('button', { name: '填入验收备注' }).click();
+  await expect(page.getByLabel('验收备注')).toHaveValue(algorithmDraftTwo);
 });

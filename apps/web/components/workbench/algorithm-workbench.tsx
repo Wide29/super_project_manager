@@ -142,6 +142,7 @@ export function AlgorithmWorkbench({
                 </p>
               </div>
               <WorkbenchAgentCard
+                key={selectedRecord.delivery.id}
                 title="AI 验收助手"
                 description="为当前交付生成抽检关注点、风险模式和验收备注草稿。"
                 actionLabel="生成验收建议"

@@ -51,6 +51,12 @@ export function BatchAcceptanceForm({
   const availableDeliveries = deliveries.filter((delivery) => delivery.status === 'submitted');
 
   useEffect(() => {
+    setForm(createInitialForm(deliveries));
+    setMessage('');
+    setError('');
+  }, [deliveries]);
+
+  useEffect(() => {
     if (availableDeliveries.length === 0) {
       setForm(createInitialForm(deliveries));
       return;
