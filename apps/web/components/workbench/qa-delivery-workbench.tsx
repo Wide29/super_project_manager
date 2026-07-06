@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { WorkbenchAgentCard } from '../ai/workbench-agent-card';
 import { BatchDeliveryForm } from '../forms/batch-delivery-form';
 import { TaskReviewForm } from '../forms/task-review-form';
+import { getTaskSuggestion } from '../../lib/api/ai';
 import { ActionCard } from '../ui/action-card';
 
 export type QaTaskRecord = {
@@ -34,6 +36,7 @@ export function QaDeliveryWorkbench({
 }) {
   const [selectedTaskId, setSelectedTaskId] = useState(pendingQaTasks[0]?.taskId ?? '');
   const [selectedBatchId, setSelectedBatchId] = useState(deliverableBatches[0]?.batchId ?? '');
+  const [qaDraft, setQaDraft] = useState('');
 
   useEffect(() => {
     if (!pendingQaTasks.some((task) => task.taskId === selectedTaskId)) {
@@ -46,6 +49,10 @@ export function QaDeliveryWorkbench({
       setSelectedBatchId(deliverableBatches[0]?.batchId ?? '');
     }
   }, [deliverableBatches, selectedBatchId]);
+
+  useEffect(() => {
+    setQaDraft('');
+  }, [selectedTaskId]);
 
   const selectedTask = useMemo(
     () => pendingQaTasks.find((task) => task.taskId === selectedTaskId) ?? null,
@@ -169,7 +176,29 @@ export function QaDeliveryWorkbench({
                   {JSON.stringify(selectedTask.inputPayload, null, 2)}
                 </pre>
               </div>
-              <TaskReviewForm key={selectedTask.taskId} taskId={selectedTask.taskId} />
+              <WorkbenchAgentCard
+                title="AI 质检助手"
+                description="为当前题目生成风险提示、结论倾向和备注草稿。"
+                actionLabel="生成质检建议"
+                loadingLabel="生成中..."
+                emptyHint="选择题目后可生成 AI 质检建议。"
+                disabled={!selectedTask}
+                onGenerate={async () => {
+                  const result = await getTaskSuggestion(
+                    selectedTask.taskId,
+                    '请基于题目内容输出中文质检建议，包含：风险点、通过/打回倾向提示、可直接使用的质检备注草稿。请明确说明建议仅供人工参考。'
+                  );
+
+                  return result.suggestion;
+                }}
+                onInsert={(draft) => setQaDraft(draft)}
+                insertLabel="填入质检备注"
+              />
+              <TaskReviewForm
+                key={selectedTask.taskId}
+                taskId={selectedTask.taskId}
+                externalNotesDraft={qaDraft}
+              />
             </div>
           ) : (
             <p className="text-sm text-slate-500">请选择一条待质检题目。</p>

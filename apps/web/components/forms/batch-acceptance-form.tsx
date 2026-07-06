@@ -34,11 +34,13 @@ function createInitialForm(deliveries: BatchDelivery[]): BatchAcceptanceFormStat
 export function BatchAcceptanceForm({
   deliveries,
   tasks,
-  onCreated
+  onCreated,
+  externalNotesDraft
 }: {
   deliveries: BatchDelivery[];
   tasks: TaskSummary[];
   onCreated?: (acceptance: BatchAcceptance) => void;
+  externalNotesDraft?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<BatchAcceptanceFormState>(createInitialForm(deliveries));
@@ -67,6 +69,12 @@ export function BatchAcceptanceForm({
       };
     });
   }, [deliveries, availableDeliveries]);
+
+  useEffect(() => {
+    if (!externalNotesDraft) return;
+
+    setForm((current) => ({ ...current, notes: externalNotesDraft }));
+  }, [externalNotesDraft]);
 
   function updateField<K extends keyof BatchAcceptanceFormState>(
     key: K,

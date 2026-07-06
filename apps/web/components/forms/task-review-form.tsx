@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createTaskReview } from '../../lib/api/reviews';
 import type { CreateTaskReviewInput } from '../../lib/types';
 import { ActionCard } from '../ui/action-card';
@@ -18,12 +18,24 @@ const INITIAL_FORM: TaskReviewFormState = {
   notes: ''
 };
 
-export function TaskReviewForm({ taskId }: { taskId: string }) {
+export function TaskReviewForm({
+  taskId,
+  externalNotesDraft
+}: {
+  taskId: string;
+  externalNotesDraft?: string;
+}) {
   const router = useRouter();
   const [form, setForm] = useState<TaskReviewFormState>(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!externalNotesDraft) return;
+
+    setForm((current) => ({ ...current, notes: externalNotesDraft }));
+  }, [externalNotesDraft]);
 
   function updateField<K extends keyof TaskReviewFormState>(key: K, value: TaskReviewFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));

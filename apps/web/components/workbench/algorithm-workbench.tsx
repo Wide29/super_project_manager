@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { WorkbenchAgentCard } from '../ai/workbench-agent-card';
 import { BatchAcceptanceForm } from '../forms/batch-acceptance-form';
+import { getDeliverySuggestion } from '../../lib/api/ai';
 import { ActionCard } from '../ui/action-card';
 import type { BatchAcceptance, BatchDelivery, TaskSummary } from '../../lib/types';
 
@@ -30,12 +32,17 @@ export function AlgorithmWorkbench({
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(
     pendingDeliveries[0]?.delivery.id ?? ''
   );
+  const [acceptanceDraft, setAcceptanceDraft] = useState('');
 
   useEffect(() => {
     if (!pendingDeliveries.some((record) => record.delivery.id === selectedDeliveryId)) {
       setSelectedDeliveryId(pendingDeliveries[0]?.delivery.id ?? '');
     }
   }, [pendingDeliveries, selectedDeliveryId]);
+
+  useEffect(() => {
+    setAcceptanceDraft('');
+  }, [selectedDeliveryId]);
 
   const selectedRecord = useMemo(
     () =>
@@ -134,10 +141,30 @@ export function AlgorithmWorkbench({
                   待抽检题量：{selectedRecord.tasks.length}
                 </p>
               </div>
+              <WorkbenchAgentCard
+                title="AI 验收助手"
+                description="为当前交付生成抽检关注点、风险模式和验收备注草稿。"
+                actionLabel="生成验收建议"
+                loadingLabel="生成中..."
+                emptyHint="选择交付后可生成 AI 验收建议。"
+                disabled={!selectedRecord}
+                onGenerate={async () => {
+                  const context = `批次：${selectedRecord.batchName}\n项目：${selectedRecord.projectName}\n交付说明：${selectedRecord.delivery.notes ?? '无'}\n候选题目：${selectedRecord.tasks.map((task) => task.title).join('、')}`;
+                  const result = await getDeliverySuggestion(
+                    '请输出中文算法验收建议，包含：建议抽检关注点、可能缺陷模式、可直接使用的验收备注草稿。请明确说明建议仅供人工参考。',
+                    context
+                  );
+
+                  return result.answer;
+                }}
+                onInsert={(draft) => setAcceptanceDraft(draft)}
+                insertLabel="填入验收备注"
+              />
               <BatchAcceptanceForm
                 key={selectedRecord.delivery.id}
                 deliveries={[selectedRecord.delivery]}
                 tasks={selectedRecord.tasks}
+                externalNotesDraft={acceptanceDraft}
               />
             </div>
           ) : (

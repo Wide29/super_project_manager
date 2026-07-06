@@ -123,8 +123,7 @@ test('角色工作台支持直接质检、交付与算法验收', async ({ page,
   await expect(page.getByText(deliveryNote).first()).toBeVisible();
   await page.getByRole('button', { name: new RegExp(deliveryNote) }).first().click();
   await page.getByLabel('验收结论').selectOption('accepted');
-  await page.locator('input[aria-label^="抽检题目 "]').nth(0).check();
-  await page.locator('input[aria-label^="抽检题目 "]').nth(1).check();
+  await page.locator('input[aria-label^="抽检题目 "]').first().check();
   await page.getByLabel('验收备注').fill(acceptanceNote);
   await page.getByRole('button', { name: '提交验收' }).click();
   await expect(page.getByText('算法验收结果已保存。')).toBeVisible();
@@ -196,8 +195,83 @@ test('任务详情页支持转交、质检和结算裁定', async ({ page, reque
   await expect(page.getByText('100%')).toBeVisible();
 });
 
-test('角色工作台支持 AI 建议生成与备注填入', async ({ page }) => {
+test('角色工作台支持 AI 建议生成与备注填入', async ({ page, request }) => {
+  await page.route('**/api/ai/task-suggestion', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        suggestion: 'AI 质检建议：关注题意完整性。建议结论仅供人工参考。质检备注草稿：题目表达清晰，可进入通过复核。'
+      })
+    });
+  });
+
+  await page.route('**/api/ai/chat', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        answer: 'AI 验收建议：优先抽检边界样本。建议结论仅供人工参考。验收备注草稿：已抽检关键题目，当前交付可先按通过处理。'
+      })
+    });
+  });
+
+  const projectResponse = await request.post('http://localhost:3000/projects', {
+    data: {
+      name: `AI Workbench 项目 ${Date.now()}`,
+      taskType: 'text'
+    }
+  });
+  expect(projectResponse.ok()).toBeTruthy();
+  const project = await projectResponse.json();
+
+  const batchResponse = await request.post(`http://localhost:3000/projects/${project.id}/batches`, {
+    data: {
+      name: `AI Workbench 批次 ${Date.now()}`,
+      plannedTaskCount: 2
+    }
+  });
+  expect(batchResponse.ok()).toBeTruthy();
+  const batch = await batchResponse.json();
+
+  const qaTaskTitle = `AI 质检题目 ${Date.now()}`;
+  const readyTaskTitle = `AI 验收题目 ${Date.now()}`;
+
+  for (const payload of [
+    { title: qaTaskTitle, status: 'submitted' },
+    { title: readyTaskTitle, status: 'qa_passed' }
+  ]) {
+    const taskResponse = await request.post(`http://localhost:3000/batches/${batch.id}/tasks`, {
+      data: {
+        title: payload.title,
+        status: payload.status,
+        inputPayload: {
+          question: payload.title
+        }
+      }
+    });
+    expect(taskResponse.ok()).toBeTruthy();
+  }
+
+  const deliveryResponse = await request.post(`http://localhost:3000/batches/${batch.id}/deliveries`, {
+    data: {
+      submittedBy: 'ops-ai',
+      notes: `AI 验收交付说明 ${Date.now()}`
+    }
+  });
+  expect(deliveryResponse.ok()).toBeTruthy();
+
   await page.goto('/qa-delivery');
-  await expect(page.getByRole('button', { name: '生成质检建议' })).toBeVisible();
+  await page.getByRole('button', { name: '生成质检建议' }).click();
   await expect(page.getByRole('button', { name: '填入质检备注' })).toBeVisible();
+
+  await page.getByRole('button', { name: '填入质检备注' }).click();
+  await expect(page.getByLabel('质检备注')).not.toHaveValue('');
+
+  await page.goto('/algorithm');
+  await page.getByRole('button', { name: '生成验收建议' }).click();
+  await expect(page.getByRole('button', { name: '填入验收备注' })).toBeVisible();
+
+  await page.getByRole('button', { name: '填入验收备注' }).click();
+  await expect(page.getByLabel('验收备注')).not.toHaveValue('');
 });
