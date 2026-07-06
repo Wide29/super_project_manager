@@ -3,6 +3,20 @@
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
+const GENERIC_ERROR_MESSAGE = '建议生成失败，请稍后重试。';
+
+function getChineseErrorMessage(err: unknown) {
+  if (err instanceof Error) {
+    return GENERIC_ERROR_MESSAGE;
+  }
+
+  if (typeof err === 'string' && err.trim()) {
+    return GENERIC_ERROR_MESSAGE;
+  }
+
+  return GENERIC_ERROR_MESSAGE;
+}
+
 export function WorkbenchAgentCard({
   title,
   description,
@@ -38,7 +52,7 @@ export function WorkbenchAgentCard({
       const nextDraft = await onGenerate();
       setDraft(nextDraft);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '建议生成失败');
+      setError(getChineseErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -32,3 +32,10 @@
 
 - The added e2e test is intentionally red until Task 2 wires the shared card into the QA/Delivery workbench.
 - The current task scope does not include page integration, so button visibility is not yet achievable from this file set alone.
+
+## Fix Follow-up
+
+- Updated `WorkbenchAgentCard` error handling so user-visible failures always use Chinese fallback copy instead of surfacing raw exception text.
+- Focused validation:
+  - `npm run build --workspace web`
+  - Result: PASS
