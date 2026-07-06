@@ -43,3 +43,15 @@ The platform treats each question as the smallest production unit and supports:
 4. Run `npx prisma migrate dev --name init`
 5. Run `npm run start:dev`
 6. Open `http://localhost:3000/api`
+
+## Workflow modules
+
+- `POST /tasks/:taskId/reviews`
+- `GET /tasks/:taskId/reviews`
+- `POST /batches/:batchId/deliveries`
+- `GET /batches/:batchId/deliveries`
+- `POST /deliveries/:deliveryId/acceptances`
+- `GET /batches/:batchId/acceptances`
+- `POST /tasks/:taskId/settlement`
+- `GET /tasks/:taskId/settlement`
+- `POST /assignments/:assignmentId/transfer`

@@ -7,6 +7,11 @@ import type {
   TaskSummary
 } from '../types';
 
+export interface WorkflowTaskRecord {
+  batchId: string;
+  task: TaskSummary;
+}
+
 export function getBatchTasks(batchId: string) {
   return apiFetch<TaskSummary[]>(`/batches/${batchId}/tasks`);
 }
@@ -49,4 +54,20 @@ export function importTasks(batchId: string, body: ImportTasksInput) {
     method: 'POST',
     body: JSON.stringify(body)
   });
+}
+
+export async function getTasksForBatches(batchIds: string[]): Promise<WorkflowTaskRecord[]> {
+  const taskGroups = await Promise.all(
+    batchIds.map(async (batchId) => ({
+      batchId,
+      tasks: await getBatchTasks(batchId)
+    }))
+  );
+
+  return taskGroups.flatMap(({ batchId, tasks }) =>
+    tasks.map((task) => ({
+      batchId,
+      task
+    }))
+  );
 }

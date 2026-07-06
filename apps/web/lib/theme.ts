@@ -11,6 +11,8 @@ export const theme = {
     { href: '/', label: '总览' },
     { href: '/projects', label: '项目管理' },
     { href: '/workbench', label: '标注工作台' },
+    { href: '/qa-delivery', label: '质检交付台' },
+    { href: '/algorithm', label: '算法验收台' },
     { href: '/assistant', label: '智能助手' }
   ]
 } as const;
