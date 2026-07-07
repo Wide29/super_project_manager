@@ -95,11 +95,11 @@ test('批次页和任务页支持创建任务、导入 JSON 和分配标注员',
   const assigneeId = `annotator-${Date.now()}`;
   await page.getByLabel('标注员 ID').fill(assigneeId);
   await page.getByLabel('运营商 ID').fill('operator-01');
-  await page.getByLabel('备注').fill('Playwright 分配验证');
+  await page.getByLabel('分配备注').fill('Playwright 分配验证');
   await page.getByRole('button', { name: '确认分配' }).click();
 
   await expect(page.getByText(assigneeId).first()).toBeVisible();
-  await expect(page.getByText('Playwright 分配验证')).toBeVisible();
+  await expect(page.getByText('备注：Playwright 分配验证').first()).toBeVisible();
 });
 
 test('批次页支持发起交付与算法验收', async ({ page, request }) => {

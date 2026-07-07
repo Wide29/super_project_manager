@@ -97,7 +97,7 @@ export function AssignmentCreateForm({ taskId }: { taskId: string }) {
 
         <div>
           <label htmlFor="assignment-notes" className="text-sm font-medium text-slateDeep">
-            备注
+            分配备注
           </label>
           <textarea
             id="assignment-notes"
