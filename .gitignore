@@ -9,3 +9,8 @@ build/
 coverage/
 *.log
 apps/web/.next/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc

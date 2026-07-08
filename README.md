@@ -44,6 +44,12 @@ The platform treats each question as the smallest production unit and supports:
 5. Run `npm run start:dev`
 6. Open `http://localhost:3000/api`
 
+## Python algorithm service
+
+- Service root: `python_algorithm_service/`
+- Start locally: `cd python_algorithm_service && uvicorn app.main:app --reload --port 8001`
+- Test locally: `cd python_algorithm_service && python -m pytest`
+
 ## Workflow modules
 
 - `POST /tasks/:taskId/reviews`
