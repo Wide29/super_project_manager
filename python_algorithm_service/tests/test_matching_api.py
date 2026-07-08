@@ -19,7 +19,7 @@ def test_matching_returns_original_worker_first_for_rework() -> None:
                 "original_worker_id": "worker-b",
                 "worker_profiles": {
                     "worker-a": {"active_load": 1, "pass_rate": 0.95},
-                    "worker-b": {"active_load": 1, "pass_rate": 0.9},
+                    "worker-b": {"active_load": 3, "pass_rate": 0.9},
                 },
             },
         },
@@ -29,3 +29,15 @@ def test_matching_returns_original_worker_first_for_rework() -> None:
     body = response.json()
     assert body["service"] == "matching"
     assert body["result"]["recommendations"][0]["worker_id"] == "worker-b"
+    assert body["result"]["recommendations"][0]["reasons"][-1] == "rework_original_worker_preferred"
+    assert body["result"]["recommendations"][0]["warnings"] == ["load_high"]
+    assert body["reasons"][-1] == {
+        "code": "rework_original_worker_preferred",
+        "message": "Original worker received a rework continuity boost.",
+    }
+    assert body["warnings"] == [
+        {
+            "code": "load_high",
+            "message": "Active workload is at or above the high-load threshold.",
+        }
+    ]

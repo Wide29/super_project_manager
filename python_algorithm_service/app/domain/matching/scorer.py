@@ -1,15 +1,16 @@
-def score_candidate(worker_id: str, context: dict) -> tuple[float, list[str], list[str]]:
-    profiles = context.get("worker_profiles", {})
-    profile = profiles.get(worker_id, {})
-    active_load = profile.get("active_load", 0)
-    pass_rate = profile.get("pass_rate", 0.0)
+def score_candidate(worker_id: str, features: dict) -> tuple[float, list[str], list[str]]:
+    active_load = features.get("active_load", 0)
+    recent_pass_rate = features.get("recent_pass_rate", features.get("pass_rate", 0.0))
 
     score = 100.0
-    reasons = [f"load_{active_load}", f"pass_rate_{pass_rate}"]
+    reasons = ["active_load_considered", "recent_pass_rate_considered"]
     warnings: list[str] = []
 
     score -= active_load * 5
-    score += pass_rate * 10
+    score += recent_pass_rate * 10
+
+    if recent_pass_rate >= 0.9:
+        reasons.append("recent_pass_rate_high")
 
     if active_load >= 3:
         warnings.append("load_high")

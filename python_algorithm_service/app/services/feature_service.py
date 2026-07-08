@@ -19,8 +19,18 @@ class FeatureService:
     def get_worker_features(self, payload: dict[str, Any]) -> dict[str, Any]:
         source = self.repository.get_worker_features(payload)
         context = self._get_context(source)
+        worker_id = source.get("worker_id", payload.get("worker_id"))
+
+        if worker_id and isinstance(context.get("worker_profiles"), dict):
+            worker_context = context["worker_profiles"].get(worker_id)
+            if isinstance(worker_context, dict):
+                context = worker_context
+
         return {
-            "recent_pass_rate": context.get("recent_pass_rate", 1.0),
+            "recent_pass_rate": context.get(
+                "recent_pass_rate",
+                context.get("pass_rate", 1.0),
+            ),
             "recent_rework_rate": context.get("recent_rework_rate", 0.0),
             "active_load": context.get("active_load", 0),
         }
