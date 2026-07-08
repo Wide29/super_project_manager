@@ -181,11 +181,14 @@ class FeatureService:
         missing_fields: list[str],
     ) -> dict[str, Any]:
         task_data = task if isinstance(task, dict) else {}
+        task_id = task_data.get("task_id")
+        if task_id is None:
+            missing_fields.append(f"task_pool[{index}].task_id")
         risk_level = task_data.get("risk_level")
         if risk_level is None:
             risk_level = RiskLevel.HIGH.value
             missing_fields.append(f"task_pool[{index}].risk_level")
         return {
-            "task_id": task_data.get("task_id"),
+            "task_id": task_id,
             "risk_level": risk_level,
         }

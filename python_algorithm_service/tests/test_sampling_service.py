@@ -138,3 +138,37 @@ def test_plan_batch_uses_conservative_high_risk_defaults_and_warning_when_batch_
         "No high-risk task was available, so baseline tasks were selected using "
         "the seeded fallback strategy."
     )
+
+
+def test_plan_batch_filters_missing_task_ids_and_warns_conservatively() -> None:
+    service = SamplingService(
+        rule_repository=StubRuleRepository(),
+        feature_service=StubFeatureService(
+            batch_features={
+                "batch_risk_level": "high",
+                "task_count": 2,
+                "task_pool": [
+                    {"task_id": None, "risk_level": "high"},
+                    {"task_id": "t-2", "risk_level": "low"},
+                ],
+                "sampling_seed": "missing-task-id-seed",
+            }
+        ),
+    )
+
+    response = service.plan_batch(
+        BatchSamplingRequest(
+            batch_id="batch-2",
+            project_id="project-1",
+            task_pool=[],
+            context={},
+        )
+    )
+
+    assert response.result.selected_task_ids == ["t-2"]
+    assert response.result.sample_count == 1
+    assert [warning.code for warning in response.warnings] == [
+        "batch_features_missing",
+        "sampling_fallback_applied",
+    ]
+    assert "task_pool[0].task_id" in response.warnings[0].message

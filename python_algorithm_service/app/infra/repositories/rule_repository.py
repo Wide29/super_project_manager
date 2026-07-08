@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from app.domain.common.types import RuleConfig
 
 DEFAULT_RULES: dict[str, dict] = {
@@ -38,8 +40,10 @@ PROJECT_RULE_OVERRIDES: dict[str, dict[str, dict]] = {}
 
 class RuleRepository:
     def get_rule(self, rule_type: str, project_id: str | None = None) -> RuleConfig:
-        default_config = DEFAULT_RULES.get(rule_type, {})
-        project_overrides = PROJECT_RULE_OVERRIDES.get(project_id or "", {}).get(rule_type, {})
+        default_config = deepcopy(DEFAULT_RULES.get(rule_type, {}))
+        project_overrides = deepcopy(
+            PROJECT_RULE_OVERRIDES.get(project_id or "", {}).get(rule_type, {})
+        )
         return RuleConfig(
             rule_type=rule_type,
             rule_version=f"{rule_type}_rules_v1",

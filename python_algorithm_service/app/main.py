@@ -6,6 +6,7 @@ from app.api.error_handling import (
     REQUEST_ID_HEADER,
     get_request_id,
     request_validation_exception_handler,
+    sanitize_request_id,
     unhandled_exception_handler,
 )
 from app.api.routes.health import router as health_router
@@ -22,7 +23,9 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def request_context_middleware(request: Request, call_next):
-        request.state.request_id = request.headers.get(REQUEST_ID_HEADER) or get_request_id(request)
+        request.state.request_id = sanitize_request_id(request.headers.get(REQUEST_ID_HEADER))
+        if request.state.request_id is None:
+            request.state.request_id = get_request_id(request)
         response = await call_next(request)
         response.headers[REQUEST_ID_HEADER] = request.state.request_id
         return response

@@ -13,11 +13,30 @@ UNAVAILABLE_FEATURE_VERSION = "unavailable"
 REQUEST_ID_HEADER = "X-Request-ID"
 VALIDATION_ERROR_CODE = "validation_error"
 INTERNAL_ERROR_CODE = "internal_error"
+MAX_REQUEST_ID_LENGTH = 128
+ALLOWED_REQUEST_ID_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789"
+    "-_.:"
+)
+
+
+def sanitize_request_id(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    if not stripped or len(stripped) > MAX_REQUEST_ID_LENGTH:
+        return None
+    if any(char not in ALLOWED_REQUEST_ID_CHARS for char in stripped):
+        return None
+    return stripped
 
 
 def get_request_id(request: Request) -> str:
     request_id = getattr(request.state, "request_id", None)
-    if isinstance(request_id, str) and request_id:
+    request_id = sanitize_request_id(request_id)
+    if request_id:
         return request_id
 
     generated = str(uuid4())

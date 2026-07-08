@@ -91,3 +91,17 @@ def test_feature_service_tracks_missing_task_features_and_uses_conservative_defa
         "deadline_hours_left",
         "historical_defect_rate",
     ]
+
+
+def test_request_id_header_is_sanitized_when_invalid() -> None:
+    client = TestClient(create_app())
+
+    response = client.get(
+        "/health",
+        headers={"X-Request-ID": "bad id with spaces and !"},
+    )
+
+    assert response.status_code == 200
+    sanitized_request_id = response.headers["X-Request-ID"]
+    assert sanitized_request_id != "bad id with spaces and !"
+    assert response.json()["request_id"] == sanitized_request_id

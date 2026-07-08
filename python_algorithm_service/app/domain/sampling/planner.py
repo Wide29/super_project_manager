@@ -17,7 +17,9 @@ def build_sampling_plan(
     forced_risk_levels = set(config.get("forced_risk_levels", ["high"]))
     selection_seed = context.get("sampling_seed")
     selected = [
-        task["task_id"] for task in task_pool if task.get("risk_level") in forced_risk_levels
+        task["task_id"]
+        for task in task_pool
+        if task.get("task_id") is not None and task.get("risk_level") in forced_risk_levels
     ]
     found_forced_task = bool(selected)
     requested_target_count = context.get("target_sample_count")

@@ -106,3 +106,27 @@ def test_build_sampling_plan_uses_seeded_random_baseline_selection() -> None:
     assert selected == ["t-4", "t-2", "t-3"]
     assert flags == ["expand_sampling", "fallback_to_first_available_task"]
     assert used_fallback is True
+
+
+def test_build_sampling_plan_ignores_tasks_without_task_ids() -> None:
+    ratio, selected, flags, used_fallback = build_sampling_plan(
+        [
+            {"task_id": None, "risk_level": "high"},
+            {"task_id": "t-2", "risk_level": "low"},
+        ],
+        {
+            "batch_risk_level": "high",
+            "task_count": 2,
+            "sampling_seed": "task-id-filter-seed",
+        },
+        {
+            "ratio_by_risk_level": {"low": 0.1, "medium": 0.2, "high": 0.5},
+            "forced_risk_levels": ["high"],
+            "fallback_to_first_available": True,
+        },
+    )
+
+    assert ratio == 0.5
+    assert selected == ["t-2"]
+    assert flags == ["expand_sampling", "fallback_to_first_available_task"]
+    assert used_fallback is True
