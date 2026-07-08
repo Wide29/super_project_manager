@@ -19,7 +19,16 @@ class SamplingService:
 
     def plan_batch(self, payload: BatchSamplingRequest) -> ServiceEnvelope[BatchSamplingResult]:
         rule = self.rule_repository.get_rule("sampling", payload.project_id)
-        features = self.feature_service.get_batch_features(payload.model_dump())
+        feature_payload = payload.model_dump()
+        feature_snapshot = FeatureService.ensure_batch_snapshot(
+            self.feature_service.get_batch_features(feature_payload),
+            feature_payload,
+        )
+        features = {
+            **feature_snapshot.values,
+            "sampling_seed": feature_snapshot.values.get("sampling_seed")
+            or f"{payload.project_id}:{payload.batch_id}",
+        }
         ratio, selected_task_ids, flags, used_fallback = build_sampling_plan(
             features.get("task_pool", []),
             features,
@@ -43,7 +52,10 @@ class SamplingService:
                     ),
                 )
             ],
-            warnings=self._build_warnings(used_fallback),
+            warnings=self._build_warnings(
+                used_fallback,
+                feature_snapshot.missing_fields,
+            ),
         )
 
     @staticmethod
@@ -51,14 +63,29 @@ class SamplingService:
         return f"Sampling ratio set to {int(ratio * 100)}% for a {batch_risk_level}-risk batch."
 
     @staticmethod
-    def _build_warnings(used_fallback: bool) -> list[WarningModel]:
-        if not used_fallback:
-            return []
-        return [
-            WarningModel(
-                code=SAMPLING_FALLBACK_WARNING_CODE,
-                message=(
-                    "No high-risk task was available, so the first task was selected as a fallback."
-                ),
+    def _build_warnings(
+        used_fallback: bool,
+        missing_fields: list[str],
+    ) -> list[WarningModel]:
+        warnings: list[WarningModel] = []
+        if missing_fields:
+            warnings.append(
+                WarningModel(
+                    code="batch_features_missing",
+                    message=(
+                        "Conservative defaults were used because sampling features were "
+                        f"missing: {', '.join(missing_fields)}."
+                    ),
+                )
             )
-        ]
+        if used_fallback:
+            warnings.append(
+                WarningModel(
+                    code=SAMPLING_FALLBACK_WARNING_CODE,
+                    message=(
+                        "No high-risk task was available, so baseline tasks were selected "
+                        "using the seeded fallback strategy."
+                    ),
+                )
+            )
+        return warnings

@@ -142,3 +142,33 @@ def test_score_task_uses_rule_config_thresholds_from_repository() -> None:
 
     assert response.result.risk_score == 80
     assert response.result.risk_level == "high"
+
+
+def test_score_task_returns_warning_and_conservative_high_risk_when_features_are_missing() -> None:
+    service = RiskService(
+        rule_repository=StubRuleRepository(),
+        feature_service=StubFeatureService(
+            task_features={},
+            worker_features={},
+        ),
+    )
+
+    response = service.score_task(
+        TaskRiskRequest(
+            task_id="task-1",
+            project_id="project-1",
+            context={},
+        )
+    )
+
+    assert response.result.risk_level == "high"
+    assert response.result.reason_codes == [
+        "rework_count_high",
+        "deadline_pressure",
+        "historical_defect_high",
+    ]
+    assert [warning.code for warning in response.warnings] == ["task_features_missing"]
+    assert response.warnings[0].message == (
+        "Conservative defaults were used because task features were missing: "
+        "rework_count, deadline_hours_left, historical_defect_rate."
+    )

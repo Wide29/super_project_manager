@@ -36,14 +36,24 @@ class MatchingService:
     ) -> ServiceEnvelope[RecommendTaskWorkersResult]:
         rule = self.rule_repository.get_rule("matching", payload.project_id)
         rule_config = rule.config
+        missing_feature_details: list[tuple[str, list[str]]] = []
         candidates: list[tuple[str, float, list[str], list[str]]] = []
         for worker_id in filter_candidates(payload.candidate_worker_ids):
-            worker_features = self.feature_service.get_worker_features(
-                self._build_worker_feature_payload(payload, worker_id)
+            worker_feature_payload = self._build_worker_feature_payload(payload, worker_id)
+            feature_snapshot = FeatureService.ensure_worker_snapshot(
+                self.feature_service.get_worker_features(worker_feature_payload),
+                worker_feature_payload,
             )
+            matching_missing_fields = [
+                field_name
+                for field_name in ("active_load", "recent_pass_rate")
+                if field_name in feature_snapshot.missing_fields
+            ]
+            if matching_missing_fields:
+                missing_feature_details.append((worker_id, matching_missing_fields))
             base_score, reasons, warnings = score_candidate(
                 worker_id,
-                worker_features,
+                feature_snapshot.values,
                 rule_config,
             )
             final_score, policy_reasons, policy_warnings = apply_policies(
@@ -81,7 +91,7 @@ class MatchingService:
             feature_version=MATCHING_FEATURE_VERSION,
             result=RecommendTaskWorkersResult(recommendations=items),
             reasons=self._build_reasons(items),
-            warnings=self._build_warnings(items),
+            warnings=self._build_warnings(items, missing_feature_details),
         )
 
     @staticmethod
@@ -117,9 +127,12 @@ class MatchingService:
     @staticmethod
     def _build_warnings(
         recommendations: list[RecommendationItem],
+        missing_feature_details: list[tuple[str, list[str]]],
     ) -> list[WarningModel]:
         seen_codes: set[str] = set()
-        warnings: list[WarningModel] = []
+        warnings = MatchingService._build_missing_feature_warnings(missing_feature_details)
+        if warnings:
+            seen_codes.add("worker_features_missing")
 
         for item in recommendations:
             for code in item.warnings:
@@ -134,3 +147,24 @@ class MatchingService:
                 )
 
         return warnings
+
+    @staticmethod
+    def _build_missing_feature_warnings(
+        missing_feature_details: list[tuple[str, list[str]]],
+    ) -> list[WarningModel]:
+        if not missing_feature_details:
+            return []
+
+        worker_segments = [
+            f"{worker_id}({', '.join(missing_fields)})"
+            for worker_id, missing_fields in missing_feature_details
+        ]
+        return [
+            WarningModel(
+                code="worker_features_missing",
+                message=(
+                    "Conservative defaults were used because worker features were missing: "
+                    f"{'; '.join(worker_segments)}."
+                ),
+            )
+        ]

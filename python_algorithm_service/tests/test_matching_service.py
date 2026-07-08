@@ -153,3 +153,41 @@ def test_recommend_uses_rule_config_thresholds_for_warning_and_boost_behavior() 
         "rework_original_worker_preferred",
     ]
     assert recommendation.warnings == []
+
+
+def test_recommend_returns_warning_and_conservative_score_when_worker_features_are_missing() -> None:
+    service = MatchingService(
+        rule_repository=StubRuleRepository(),
+        feature_service=StubFeatureService(
+            features_by_worker_id={
+                "worker-a": {},
+                "worker-b": {"active_load": 1, "recent_pass_rate": 0.8},
+            }
+        ),
+    )
+
+    response = service.recommend(
+        RecommendTaskWorkersRequest(
+            task_id="task-1",
+            project_id="project-1",
+            batch_id="batch-1",
+            candidate_worker_ids=["worker-a", "worker-b"],
+            top_k=2,
+            context={},
+        )
+    )
+
+    recommendations = response.result.recommendations
+    assert [item.worker_id for item in recommendations] == ["worker-b", "worker-a"]
+    assert recommendations[1].score < 0
+    assert [warning.code for warning in response.warnings] == [
+        "worker_features_missing",
+        "load_high",
+    ]
+    assert response.warnings[0].message == (
+        "Conservative defaults were used because worker features were missing: "
+        "worker-a(active_load, recent_pass_rate)."
+    )
+    assert response.warnings[1].message == (
+        "Active workload is at or above the high-load threshold."
+    )

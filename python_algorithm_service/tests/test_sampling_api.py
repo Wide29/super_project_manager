@@ -59,12 +59,15 @@ def test_batch_sampling_returns_warning_when_fallback_selection_is_used() -> Non
     body = response.json()
 
     assert body["result"]["sampling_ratio"] == 0.2
-    assert body["result"]["selected_task_ids"] == ["t-1"]
+    assert body["result"]["selected_task_ids"] == ["t-2"]
     assert body["result"]["recommendation_flags"] == ["fallback_to_first_available_task"]
     assert body["warnings"] == [
         {
             "code": "sampling_fallback_applied",
-            "message": "No high-risk task was available, so the first task was selected as a fallback.",
+            "message": (
+                "No high-risk task was available, so baseline tasks were selected using "
+                "the seeded fallback strategy."
+            ),
         }
     ]
 
@@ -87,3 +90,23 @@ def test_batch_sampling_rejects_unknown_task_risk_level_with_error_envelope() ->
     assert body["service"] == "sampling"
     assert body["reasons"][0]["code"] == "validation_error"
     assert body["debug"]["errors"][0]["loc"][-1] == "risk_level"
+
+
+def test_batch_sampling_rejects_unknown_batch_risk_level_with_error_envelope() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/v1/sampling/batch-plan",
+        json={
+            "batch_id": "batch-3",
+            "project_id": "project-1",
+            "task_pool": [{"task_id": "t-1", "risk_level": "low"}],
+            "context": {"batch_risk_level": "urgent", "task_count": 1},
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["service"] == "sampling"
+    assert body["reasons"][0]["code"] == "validation_error"
+    assert body["debug"]["errors"][0]["loc"][-1] == "batch_risk_level"

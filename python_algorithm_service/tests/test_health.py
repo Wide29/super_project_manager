@@ -60,8 +60,34 @@ def test_feature_service_returns_normalized_task_features() -> None:
         },
     }
 
-    assert service.get_task_features(payload) == {
+    snapshot = service.get_task_features(payload)
+
+    assert snapshot.values == {
         "rework_count": 2,
         "deadline_hours_left": 3,
         "historical_defect_rate": 0.4,
     }
+    assert snapshot.missing_fields == []
+
+
+def test_feature_service_tracks_missing_task_features_and_uses_conservative_defaults() -> None:
+    service = FeatureService()
+
+    snapshot = service.get_task_features(
+        {
+            "task_id": "task-2",
+            "context": {
+                "rework_count": 1,
+            },
+        }
+    )
+
+    assert snapshot.values == {
+        "rework_count": 1,
+        "deadline_hours_left": 0,
+        "historical_defect_rate": 1.0,
+    }
+    assert snapshot.missing_fields == [
+        "deadline_hours_left",
+        "historical_defect_rate",
+    ]
