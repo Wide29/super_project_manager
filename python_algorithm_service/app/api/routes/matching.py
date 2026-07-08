@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
+from app.api.error_handling import attach_request_context
 from app.schemas.common import ServiceEnvelope
 from app.schemas.matching import (
     RecommendTaskWorkersRequest,
@@ -16,6 +17,7 @@ service = MatchingService()
     response_model=ServiceEnvelope[RecommendTaskWorkersResult],
 )
 def recommend_task_workers(
+    request: Request,
     payload: RecommendTaskWorkersRequest,
 ) -> ServiceEnvelope[RecommendTaskWorkersResult]:
-    return service.recommend(payload)
+    return attach_request_context(request, service.recommend(payload))

@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
 
+from app.domain.common.enums import RiskLevel
+
 
 class SamplingTaskItem(BaseModel):
     task_id: str
-    risk_level: str
+    risk_level: RiskLevel
 
 
 class BatchSamplingRequest(BaseModel):

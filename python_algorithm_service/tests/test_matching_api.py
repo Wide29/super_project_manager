@@ -41,3 +41,30 @@ def test_matching_returns_original_worker_first_for_rework() -> None:
             "message": "Active workload is at or above the high-load threshold.",
         }
     ]
+
+
+def test_matching_rejects_non_positive_top_k_with_error_envelope() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/v1/matching/recommend-task-workers",
+        json={
+            "task_id": "task-1",
+            "project_id": "project-1",
+            "batch_id": "batch-1",
+            "candidate_worker_ids": ["worker-a"],
+            "top_k": 0,
+            "context": {},
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["service"] == "matching"
+    assert body["service_version"] == "v1"
+    assert body["rule_version"] == "unavailable"
+    assert body["feature_version"] == "unavailable"
+    assert body["result"] == {}
+    assert body["reasons"][0]["code"] == "validation_error"
+    assert body["warnings"] == []
+    assert body["debug"]["errors"][0]["loc"][-1] == "top_k"

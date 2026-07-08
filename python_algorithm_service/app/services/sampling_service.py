@@ -23,6 +23,7 @@ class SamplingService:
         ratio, selected_task_ids, flags, used_fallback = build_sampling_plan(
             features.get("task_pool", []),
             features,
+            rule.config,
         )
         return ServiceEnvelope[BatchSamplingResult](
             service="sampling",
@@ -37,7 +38,9 @@ class SamplingService:
             reasons=[
                 ExplanationModel(
                     code="sampling_ratio_selected",
-                    message=self._build_ratio_message(features.get("batch_risk_level", "low"), ratio),
+                    message=self._build_ratio_message(
+                        features.get("batch_risk_level", "low"), ratio
+                    ),
                 )
             ],
             warnings=self._build_warnings(used_fallback),
@@ -45,9 +48,7 @@ class SamplingService:
 
     @staticmethod
     def _build_ratio_message(batch_risk_level: str, ratio: float) -> str:
-        return (
-            f"Sampling ratio set to {int(ratio * 100)}% for a {batch_risk_level}-risk batch."
-        )
+        return f"Sampling ratio set to {int(ratio * 100)}% for a {batch_risk_level}-risk batch."
 
     @staticmethod
     def _build_warnings(used_fallback: bool) -> list[WarningModel]:

@@ -6,7 +6,7 @@ class RecommendTaskWorkersRequest(BaseModel):
     project_id: str
     batch_id: str
     candidate_worker_ids: list[str] = Field(default_factory=list)
-    top_k: int = 5
+    top_k: int = Field(default=5, ge=1)
     context: dict = Field(default_factory=dict)
 
 

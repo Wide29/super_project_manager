@@ -35,16 +35,22 @@ class MatchingService:
         self, payload: RecommendTaskWorkersRequest
     ) -> ServiceEnvelope[RecommendTaskWorkersResult]:
         rule = self.rule_repository.get_rule("matching", payload.project_id)
+        rule_config = rule.config
         candidates: list[tuple[str, float, list[str], list[str]]] = []
         for worker_id in filter_candidates(payload.candidate_worker_ids):
             worker_features = self.feature_service.get_worker_features(
                 self._build_worker_feature_payload(payload, worker_id)
             )
-            base_score, reasons, warnings = score_candidate(worker_id, worker_features)
+            base_score, reasons, warnings = score_candidate(
+                worker_id,
+                worker_features,
+                rule_config,
+            )
             final_score, policy_reasons, policy_warnings = apply_policies(
                 worker_id,
                 base_score,
                 payload.context,
+                rule_config,
             )
             candidates.append(
                 (
@@ -64,7 +70,9 @@ class MatchingService:
                 reasons=reasons,
                 warnings=warnings,
             )
-            for index, (worker_id, score, reasons, warnings) in enumerate(candidates[: payload.top_k])
+            for index, (worker_id, score, reasons, warnings) in enumerate(
+                candidates[: payload.top_k]
+            )
         ]
 
         return ServiceEnvelope[RecommendTaskWorkersResult](

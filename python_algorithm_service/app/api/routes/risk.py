@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
+from app.api.error_handling import attach_request_context
 from app.schemas.common import ServiceEnvelope
 from app.schemas.risk import (
     TaskRiskRequest,
@@ -14,10 +15,13 @@ service = RiskService()
 
 
 @router.post("/task-score", response_model=ServiceEnvelope[TaskRiskResult])
-def score_task(payload: TaskRiskRequest) -> ServiceEnvelope[TaskRiskResult]:
-    return service.score_task(payload)
+def score_task(request: Request, payload: TaskRiskRequest) -> ServiceEnvelope[TaskRiskResult]:
+    return attach_request_context(request, service.score_task(payload))
 
 
 @router.post("/worker-score", response_model=ServiceEnvelope[WorkerRiskResult])
-def score_worker(payload: WorkerRiskRequest) -> ServiceEnvelope[WorkerRiskResult]:
-    return service.score_worker(payload)
+def score_worker(
+    request: Request,
+    payload: WorkerRiskRequest,
+) -> ServiceEnvelope[WorkerRiskResult]:
+    return attach_request_context(request, service.score_worker(payload))

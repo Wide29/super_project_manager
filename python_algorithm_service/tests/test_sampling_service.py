@@ -9,7 +9,12 @@ class StubRuleRepository:
         return RuleConfig(
             rule_type=rule_type,
             rule_version=f"{rule_type}_rules_test",
-            config={"project_id": project_id},
+            config={
+                "project_id": project_id,
+                "ratio_by_risk_level": {"low": 0.1, "medium": 0.2, "high": 0.3},
+                "forced_risk_levels": ["high"],
+                "fallback_to_first_available": True,
+            },
         )
 
 
@@ -52,5 +57,45 @@ def test_plan_batch_uses_feature_service_task_pool_and_marks_fallback_warning() 
     assert response.result.selected_task_ids == ["feature-task-1"]
     assert response.result.recommendation_flags == ["fallback_to_first_available_task"]
     assert response.warnings[0].code == "sampling_fallback_applied"
-    assert response.warnings[0].message == "No high-risk task was available, so the first task was selected as a fallback."
+    assert (
+        response.warnings[0].message
+        == "No high-risk task was available, so the first task was selected as a fallback."
+    )
     assert response.reasons[0].message == "Sampling ratio set to 20% for a medium-risk batch."
+
+
+def test_plan_batch_uses_rule_config_to_fill_ratio_target_count() -> None:
+    class CustomRuleRepository(StubRuleRepository):
+        def get_rule(self, rule_type: str, project_id: str | None = None):
+            rule = super().get_rule(rule_type, project_id)
+            rule.config["ratio_by_risk_level"] = {"low": 0.1, "medium": 0.2, "high": 0.5}
+            return rule
+
+    service = SamplingService(
+        rule_repository=CustomRuleRepository(),
+        feature_service=StubFeatureService(
+            batch_features={
+                "batch_risk_level": "high",
+                "task_count": 6,
+                "task_pool": [
+                    {"task_id": "t-1", "risk_level": "high"},
+                    {"task_id": "t-2", "risk_level": "low"},
+                    {"task_id": "t-3", "risk_level": "medium"},
+                    {"task_id": "t-4", "risk_level": "low"},
+                ],
+            }
+        ),
+    )
+
+    response = service.plan_batch(
+        BatchSamplingRequest(
+            batch_id="batch-1",
+            project_id="project-1",
+            task_pool=[],
+            context={},
+        )
+    )
+
+    assert response.result.sampling_ratio == 0.5
+    assert response.result.sample_count == 3
+    assert response.result.selected_task_ids == ["t-1", "t-2", "t-3"]

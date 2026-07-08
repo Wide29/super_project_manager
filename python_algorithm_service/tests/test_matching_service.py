@@ -9,7 +9,15 @@ class StubRuleRepository:
         return RuleConfig(
             rule_type=rule_type,
             rule_version=f"{rule_type}_rules_test",
-            config={"project_id": project_id},
+            config={
+                "project_id": project_id,
+                "base_score": 100.0,
+                "active_load_penalty": 5.0,
+                "pass_rate_bonus": 10.0,
+                "strong_pass_rate_threshold": 0.9,
+                "high_load_threshold": 3,
+                "rework_original_worker_boost": 20.0,
+            },
         )
 
 
@@ -99,3 +107,49 @@ def test_recommend_promotes_explanations_and_warnings_to_service_envelope() -> N
     assert response.reasons[-1].message == "Original worker received a rework continuity boost."
     assert [warning.code for warning in response.warnings] == ["load_high"]
     assert response.warnings[0].message == "Active workload is at or above the high-load threshold."
+
+
+def test_recommend_uses_rule_config_thresholds_for_warning_and_boost_behavior() -> None:
+    class CustomRuleRepository(StubRuleRepository):
+        def get_rule(self, rule_type: str, project_id: str | None = None):
+            rule = super().get_rule(rule_type, project_id)
+            rule.config.update(
+                {
+                    "active_load_penalty": 2.0,
+                    "pass_rate_bonus": 20.0,
+                    "high_load_threshold": 5,
+                    "strong_pass_rate_threshold": 0.85,
+                    "rework_original_worker_boost": 8.0,
+                }
+            )
+            return rule
+
+    service = MatchingService(
+        rule_repository=CustomRuleRepository(),
+        feature_service=StubFeatureService(
+            features_by_worker_id={
+                "worker-a": {"active_load": 4, "recent_pass_rate": 0.86},
+                "worker-b": {"active_load": 1, "recent_pass_rate": 0.8},
+            }
+        ),
+    )
+
+    response = service.recommend(
+        RecommendTaskWorkersRequest(
+            task_id="task-1",
+            project_id="project-1",
+            batch_id="batch-1",
+            candidate_worker_ids=["worker-a", "worker-b"],
+            top_k=1,
+            context={"is_rework": True, "original_worker_id": "worker-a"},
+        )
+    )
+
+    recommendation = response.result.recommendations[0]
+    assert recommendation.worker_id == "worker-a"
+    assert recommendation.score == 117.2
+    assert recommendation.reasons[-2:] == [
+        "recent_pass_rate_high",
+        "rework_original_worker_preferred",
+    ]
+    assert recommendation.warnings == []

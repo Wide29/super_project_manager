@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.api.routes import risk as risk_routes
 from app.main import create_app
 
 
@@ -74,3 +75,56 @@ def test_worker_risk_returns_window_type_and_high_risk() -> None:
     assert body["feature_version"] == "worker_risk_feature_v1"
     assert body["result"]["window_type"] == "14d"
     assert body["result"]["risk_level"] == "high"
+
+
+def test_worker_risk_rejects_unknown_window_type_with_error_envelope() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/v1/risk/worker-score",
+        json={
+            "worker_id": "worker-1",
+            "project_id": "project-1",
+            "window_type": "2d",
+            "context": {},
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["service"] == "risk"
+    assert body["reasons"][0]["code"] == "validation_error"
+    assert body["debug"]["errors"][0]["loc"][-1] == "window_type"
+
+
+def test_risk_route_wraps_unhandled_exceptions_in_error_envelope(monkeypatch) -> None:
+    client = TestClient(create_app(), raise_server_exceptions=False)
+
+    def raise_unhandled(_payload):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(risk_routes.service, "score_task", raise_unhandled)
+
+    response = client.post(
+        "/api/v1/risk/task-score",
+        json={
+            "task_id": "task-1",
+            "project_id": "project-1",
+            "context": {},
+        },
+    )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["service"] == "risk"
+    assert body["service_version"] == "v1"
+    assert body["rule_version"] == "unavailable"
+    assert body["feature_version"] == "unavailable"
+    assert body["result"] == {}
+    assert body["reasons"] == [
+        {
+            "code": "internal_error",
+            "message": "The service could not complete the request.",
+        }
+    ]
+    assert body["warnings"] == []
