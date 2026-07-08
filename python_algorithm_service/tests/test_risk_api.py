@@ -33,6 +33,20 @@ def test_task_risk_returns_high_when_rework_and_deadline_pressure() -> None:
         "deadline_pressure",
         "historical_defect_high",
     ]
+    assert body["reasons"] == [
+        {
+            "code": "rework_count_high",
+            "message": "Rework count is above the high-risk threshold.",
+        },
+        {
+            "code": "deadline_pressure",
+            "message": "Deadline is too close and increases delivery pressure.",
+        },
+        {
+            "code": "historical_defect_high",
+            "message": "Historical defect rate is above the acceptable threshold.",
+        },
+    ]
 
 
 def test_worker_risk_returns_window_type_and_high_risk() -> None:

@@ -47,9 +47,21 @@ def test_rule_repository_returns_rule_config() -> None:
     )
 
 
-def test_feature_service_returns_task_features_payload() -> None:
+def test_feature_service_returns_normalized_task_features() -> None:
     service = FeatureService()
 
-    payload = {"task_id": "task-1", "priority": 5}
+    payload = {
+        "task_id": "task-1",
+        "priority": 5,
+        "context": {
+            "rework_count": 2,
+            "deadline_hours_left": 3,
+            "historical_defect_rate": 0.4,
+        },
+    }
 
-    assert service.get_task_features(payload) == payload
+    assert service.get_task_features(payload) == {
+        "rework_count": 2,
+        "deadline_hours_left": 3,
+        "historical_defect_rate": 0.4,
+    }
