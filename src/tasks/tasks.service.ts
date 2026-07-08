@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AlgorithmGatewayService } from '../algorithms/algorithm-gateway.service';
 import { BatchesService } from '../batches/batches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -10,7 +11,8 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly batchesService: BatchesService
+    private readonly batchesService: BatchesService,
+    private readonly algorithmGatewayService: AlgorithmGatewayService
   ) {}
 
   async create(batchId: string, data: CreateTaskDto) {
@@ -129,12 +131,19 @@ export class TasksService {
       }
     });
 
-    return this.prisma.taskItem.update({
+    const updatedTask = await this.prisma.taskItem.update({
       where: { id },
       data: {
         status: 'submitted',
         inputPayload: outputPayload as Prisma.InputJsonValue
       }
     });
+
+    await this.algorithmGatewayService.scoreTaskRisk({
+      taskId: id,
+      workerId: assigneeId
+    });
+
+    return updatedTask;
   }
 }

@@ -79,6 +79,24 @@ enum TaskTransferReason {
   manual
 }
 
+enum AlgorithmRuleConfigStatus {
+  draft
+  active
+  inactive
+}
+
+enum AlgorithmModelStatus {
+  draft
+  active
+  archived
+}
+
+enum AlgorithmInvocationStatus {
+  succeeded
+  failed
+  fallback
+}
+
 model Project {
   id                 String        @id @default(cuid())
   name               String
@@ -90,6 +108,7 @@ model Project {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   batches            Batch[]
+  algorithmRuleConfigs AlgorithmRuleConfig[]
 }
 
 model Batch {
@@ -103,6 +122,8 @@ model Batch {
   project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks            TaskItem[]
   deliveries       BatchDelivery[]
+  samplingPlans    BatchSamplingPlan[]
+  forecastResults  BatchForecastResult[]
 
   @@index([projectId])
 }
@@ -121,8 +142,146 @@ model TaskItem {
   assignments  TaskAssignment[]
   reviews      TaskReview[]
   settlement   TaskSettlement?
+  matchingRecommendations TaskMatchingRecommendation[]
+  riskScores   TaskRiskScore[]
 
   @@index([batchId])
+}
+
+model AlgorithmRuleConfig {
+  id          String                    @id @default(cuid())
+  projectId   String?
+  ruleType    String
+  ruleVersion String
+  name        String?
+  configJson  Json
+  status      AlgorithmRuleConfigStatus @default(draft)
+  effectiveAt DateTime?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  project     Project?                  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([ruleType, status])
+}
+
+model AlgorithmModelRegistry {
+  id                     String               @id @default(cuid())
+  modelKey               String
+  modelVersion           String
+  featureVersion         String?
+  trainingDatasetVersion String?
+  status                 AlgorithmModelStatus @default(draft)
+  metadataJson           Json?
+  deployedAt             DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@unique([modelKey, modelVersion])
+  @@index([modelKey, status])
+}
+
+model AlgorithmInvocationLog {
+  id            String                    @id @default(cuid())
+  requestId     String
+  route         String
+  entityType    String
+  entityId      String
+  status        AlgorithmInvocationStatus
+  requestJson   Json?
+  responseJson  Json?
+  errorMessage  String?
+  fallbackUsed  Boolean                   @default(false)
+  latencyMs     Int?
+  createdAt     DateTime                  @default(now())
+
+  @@index([requestId])
+  @@index([entityType, entityId])
+  @@index([route, createdAt])
+}
+
+model TaskMatchingRecommendation {
+  id                String   @id @default(cuid())
+  taskId            String
+  projectId         String
+  batchId           String
+  requestId         String
+  modelVersion      String?
+  ruleVersion       String?
+  candidateListJson Json
+  selectedWorkerId  String?
+  selectedByUserId  String?
+  selectionSource   String?
+  createdAt         DateTime @default(now())
+  task              TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([requestId])
+  @@index([projectId, batchId])
+}
+
+model TaskRiskScore {
+  id              String   @id @default(cuid())
+  taskId          String
+  requestId       String
+  riskScore       Float
+  riskLevel       String
+  reasonCodesJson Json
+  modelVersion    String?
+  featureVersion  String?
+  createdAt       DateTime @default(now())
+  task            TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([requestId])
+}
+
+model WorkerRiskScore {
+  id              String   @id @default(cuid())
+  workerId        String
+  requestId       String
+  riskScore       Float
+  riskLevel       String
+  reasonCodesJson Json
+  windowType      String
+  modelVersion    String?
+  featureVersion  String?
+  createdAt       DateTime @default(now())
+
+  @@index([workerId, createdAt])
+  @@index([requestId])
+}
+
+model BatchSamplingPlan {
+  id                  String   @id @default(cuid())
+  batchId             String
+  requestId           String
+  recommendedRatio    Float
+  recommendedCount    Int
+  highRiskTaskIdsJson Json
+  samplingStrategy    String
+  modelVersion        String?
+  createdAt           DateTime @default(now())
+  batch               Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, createdAt])
+  @@index([requestId])
+}
+
+model BatchForecastResult {
+  id                       String   @id @default(cuid())
+  batchId                  String
+  requestId                String
+  predictedFinishAt        DateTime?
+  delayProbability         Float
+  capacityGap              Int
+  recommendedExtraHeadcount Int
+  modelVersion             String?
+  createdAt                DateTime @default(now())
+  batch                    Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, createdAt])
+  @@index([requestId])
 }
 
 model TaskAssignment {

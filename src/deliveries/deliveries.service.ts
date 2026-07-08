@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AlgorithmGatewayService } from '../algorithms/algorithm-gateway.service';
 import { BatchesService } from '../batches/batches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBatchDeliveryDto } from './dto/create-batch-delivery.dto';
@@ -7,13 +8,14 @@ import { CreateBatchDeliveryDto } from './dto/create-batch-delivery.dto';
 export class DeliveriesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly batchesService: BatchesService
+    private readonly batchesService: BatchesService,
+    private readonly algorithmGatewayService: AlgorithmGatewayService
   ) {}
 
   async create(batchId: string, dto: CreateBatchDeliveryDto) {
     await this.batchesService.findOne(batchId);
 
-    return this.prisma.$transaction(async (tx) => {
+    const delivery = await this.prisma.$transaction(async (tx) => {
       await tx.batchDelivery.updateMany({
         where: {
           batchId,
@@ -51,6 +53,12 @@ export class DeliveriesService {
 
       return delivery;
     });
+
+    await this.algorithmGatewayService.createBatchSamplingPlan({
+      batchId
+    });
+
+    return delivery;
   }
 
   async findByBatch(batchId: string) {

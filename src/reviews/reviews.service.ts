@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AlgorithmGatewayService } from '../algorithms/algorithm-gateway.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
 import { CreateTaskReviewDto } from './dto/create-task-review.dto';
@@ -7,7 +8,8 @@ import { CreateTaskReviewDto } from './dto/create-task-review.dto';
 export class ReviewsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tasksService: TasksService
+    private readonly tasksService: TasksService,
+    private readonly algorithmGatewayService: AlgorithmGatewayService
   ) {}
 
   async create(taskId: string, dto: CreateTaskReviewDto) {
@@ -29,6 +31,18 @@ export class ReviewsService {
         status: dto.decision === 'passed' ? 'qa_passed' : 'qa_rejected'
       }
     });
+
+    const latestAssignment = await this.prisma.taskAssignment.findFirst({
+      where: { taskItemId: taskId },
+      orderBy: { assignedAt: 'desc' },
+      select: { assigneeId: true }
+    });
+
+    if (latestAssignment) {
+      await this.algorithmGatewayService.scoreWorkerRisk({
+        workerId: latestAssignment.assigneeId
+      });
+    }
 
     return review;
   }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AcceptancesModule } from './acceptances/acceptances.module';
 import { AiModule } from './ai/ai.module';
+import { AlgorithmsModule } from './algorithms/algorithms.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { BatchesModule } from './batches/batches.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -14,6 +15,7 @@ import { TasksModule } from './tasks/tasks.module';
 @Module({
   imports: [
     PrismaModule,
+    AlgorithmsModule,
     ProjectsModule,
     BatchesModule,
     TasksModule,

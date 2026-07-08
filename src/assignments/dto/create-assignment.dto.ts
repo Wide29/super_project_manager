@@ -29,4 +29,19 @@ export class CreateAssignmentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  recommendationRequestId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  selectedByUserId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  selectionSource?: string;
 }

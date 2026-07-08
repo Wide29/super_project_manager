@@ -49,6 +49,7 @@ The platform treats each question as the smallest production unit and supports:
 - Service root: `python_algorithm_service/`
 - Start locally: `cd python_algorithm_service && uvicorn app.main:app --reload --port 8001`
 - Test locally: `cd python_algorithm_service && python -m pytest`
+- Backend integration switch: set `PYTHON_ALGORITHM_SERVICE_URL` to enable Nest algorithm gateway calls to the Python service; leave it unset to keep the current in-process fallback logic
 
 ## Workflow modules
 
