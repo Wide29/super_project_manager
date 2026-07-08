@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,16 @@ class HealthResult(BaseModel):
     status: str
 
 
+class ExplanationModel(BaseModel):
+    code: str
+    message: str
+
+
+class WarningModel(BaseModel):
+    code: str
+    message: str
+
+
 class ServiceEnvelope(BaseModel, Generic[T]):
     request_id: str = Field(default_factory=lambda: str(uuid4()))
     service: str
@@ -21,7 +31,6 @@ class ServiceEnvelope(BaseModel, Generic[T]):
     rule_version: str
     feature_version: str
     result: T
-    reasons: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
-    debug: dict = Field(default_factory=dict)
-
+    reasons: list[ExplanationModel] = Field(default_factory=list)
+    warnings: list[WarningModel] = Field(default_factory=list)
+    debug: dict[str, Any] = Field(default_factory=dict)

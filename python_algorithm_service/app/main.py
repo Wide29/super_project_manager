@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 
 from app.api.routes.health import router as health_router
+from app.infra.logging import setup_logging
+from app.infra.settings import settings
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Python Algorithm Service", version="0.1.0")
+    setup_logging()
+    app = FastAPI(title=settings.app_name, version=settings.app_version)
     app.include_router(health_router)
     return app
 
