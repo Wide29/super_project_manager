@@ -48,7 +48,7 @@ status: DONE_WITH_CONCERNS
   - 结果：`All checks passed!`
 
 提交 hash
-- `8d1a81ef49f007526fe2978d5db8389f7d1cf5f4`
+- `9c3d73efd8788bf3fdc5163e17e19c4f9e41da48`
 
 concerns
 - brief 的 Step 2 期望新增的 OpenAPI 标题测试先失败，但 Task 1 已经在 `create_app()` 中设置了应用元数据，所以该测试在当前基线上天然通过；我额外补了规则仓储和特征服务契约测试来完成真正的 red-green 过程。
