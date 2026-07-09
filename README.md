@@ -47,9 +47,20 @@ The platform treats each question as the smallest production unit and supports:
 ## Python algorithm service
 
 - Service root: `python_algorithm_service/`
-- Start locally: `cd python_algorithm_service && uvicorn app.main:app --reload --port 8001`
-- Test locally: `cd python_algorithm_service && python -m pytest`
+- Start locally: `npm run algo:python:start`
+- Test locally: `conda run -n algorithm_env python -m pytest python_algorithm_service/tests -q`
 - Backend integration switch: set `PYTHON_ALGORITHM_SERVICE_URL` to enable Nest algorithm gateway calls to the Python service; leave it unset to keep the current in-process fallback logic
+- Optional gateway hardening:
+  - `PYTHON_ALGORITHM_SERVICE_TIMEOUT_MS`: per-attempt timeout in milliseconds, default `1500`
+  - `PYTHON_ALGORITHM_SERVICE_RETRY_COUNT`: retry count after the first attempt, default `1`
+  - `PYTHON_ALGORITHM_SERVICE_API_KEY`: optional shared secret sent to the Python service
+  - `PYTHON_ALGORITHM_SERVICE_AUTH_HEADER`: auth header name, default `Authorization`; when using `Authorization`, the backend sends `Bearer <API_KEY>`
+- Local authenticated integration:
+  - put `PYTHON_ALGORITHM_SERVICE_URL=http://127.0.0.1:8001`
+  - put the same secret into `PYTHON_ALGORITHM_SERVICE_API_KEY` and `ALGO_API_KEY`
+  - run `npm run algo:python:start`
+  - run `npm run start:dev`
+  - run `npm run algo:e2e`
 
 ## Workflow modules
 

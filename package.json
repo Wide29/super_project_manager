@@ -6,6 +6,8 @@
     "apps/web"
   ],
   "scripts": {
+    "algo:python:start": "./scripts/start-python-algorithm-service.sh",
+    "algo:e2e": "./scripts/run-algorithm-e2e.sh",
     "build": "nest build",
     "build:web": "npm run build --workspace web",
     "start": "nest start",

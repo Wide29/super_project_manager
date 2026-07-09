@@ -4,6 +4,8 @@ from fastapi import FastAPI
 
 from app.api.error_handling import (
     REQUEST_ID_HEADER,
+    UNAUTHORIZED_ERROR_CODE,
+    build_error_response,
     get_request_id,
     request_validation_exception_handler,
     sanitize_request_id,
@@ -30,6 +32,28 @@ def create_app() -> FastAPI:
         response.headers[REQUEST_ID_HEADER] = request.state.request_id
         return response
 
+    @app.middleware("http")
+    async def authentication_middleware(request: Request, call_next):
+        if not should_enforce_api_key(request):
+            return await call_next(request)
+
+        configured_api_key = settings.api_key.strip() if settings.api_key else None
+        if not configured_api_key:
+            return await call_next(request)
+
+        header_name = settings.auth_header.strip() or "Authorization"
+        provided_token = extract_auth_token(request, header_name)
+        if provided_token != configured_api_key:
+            return build_error_response(
+                request,
+                status_code=401,
+                reason_code=UNAUTHORIZED_ERROR_CODE,
+                message="The request is missing valid service authentication.",
+                debug={"header": header_name},
+            )
+
+        return await call_next(request)
+
     app.add_exception_handler(
         RequestValidationError,
         request_validation_exception_handler,
@@ -43,3 +67,18 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+
+def should_enforce_api_key(request: Request) -> bool:
+    path = request.url.path
+    return path not in {"/health", "/openapi.json", "/docs", "/redoc"}
+
+
+def extract_auth_token(request: Request, header_name: str) -> str | None:
+    raw_value = request.headers.get(header_name)
+    if not raw_value:
+        return None
+    stripped = raw_value.strip()
+    if header_name.lower() == "authorization" and stripped.lower().startswith("bearer "):
+        return stripped[7:].strip() or None
+    return stripped or None

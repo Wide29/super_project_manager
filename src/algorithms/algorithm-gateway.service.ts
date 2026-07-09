@@ -60,6 +60,11 @@ type SamplingGatewayResponse = {
   featureVersion?: string;
 };
 
+type PythonRequestError = Error & {
+  retryable?: boolean;
+  statusCode?: number;
+};
+
 @Injectable()
 export class AlgorithmGatewayService {
   constructor(private readonly prisma: PrismaService) {}
@@ -778,20 +783,27 @@ export class AlgorithmGatewayService {
       return null;
     }
 
-    const response = await fetch(`${baseUrl}${path}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    const maxAttempts = this.getPythonRetryCount() + 1;
+    let lastError: Error | undefined;
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Python algorithm service request failed: ${response.status} ${body}`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        return await this.performPythonRequest<T>(baseUrl, path, payload, attempt, maxAttempts);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        const shouldRetry = attempt < maxAttempts && this.shouldRetryPythonRequest(lastError);
+
+        if (!shouldRetry) {
+          break;
+        }
+      }
     }
 
-    return (await response.json()) as T;
+    throw new Error(
+      `Python algorithm service request failed after ${maxAttempts} attempt(s): ${
+        lastError?.message ?? 'Unknown error'
+      }`
+    );
   }
 
   private toPythonModelVersion(serviceVersion: string) {
@@ -1040,6 +1052,101 @@ export class AlgorithmGatewayService {
   private getStringContextValue(context: Record<string, unknown> | undefined, key: string) {
     const value = context?.[key];
     return typeof value === 'string' ? value : undefined;
+  }
+
+  private async performPythonRequest<T>(
+    baseUrl: string,
+    path: string,
+    payload: unknown,
+    attempt: number,
+    maxAttempts: number
+  ): Promise<T> {
+    const timeoutMs = this.getPythonTimeoutMs();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: this.buildPythonRequestHeaders(),
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw this.createPythonRequestError(
+          `Python algorithm service request failed: ${response.status} ${body}`,
+          response.status >= 500 || response.status === 408 || response.status === 429,
+          response.status
+        );
+      }
+
+      return (await response.json()) as T;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw this.createPythonRequestError(
+          `Python algorithm service request timed out after ${timeoutMs}ms on attempt ${attempt}/${maxAttempts}`,
+          true
+        );
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('Unknown error');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private buildPythonRequestHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    const apiKey = process.env.PYTHON_ALGORITHM_SERVICE_API_KEY?.trim();
+
+    if (!apiKey) {
+      return headers;
+    }
+
+    const headerName = process.env.PYTHON_ALGORITHM_SERVICE_AUTH_HEADER?.trim() || 'Authorization';
+    headers[headerName] = headerName.toLowerCase() === 'authorization' ? `Bearer ${apiKey}` : apiKey;
+    return headers;
+  }
+
+  private getPythonTimeoutMs() {
+    const rawValue = Number(process.env.PYTHON_ALGORITHM_SERVICE_TIMEOUT_MS);
+    if (Number.isFinite(rawValue) && rawValue > 0) {
+      return Math.floor(rawValue);
+    }
+
+    return 1500;
+  }
+
+  private getPythonRetryCount() {
+    const rawValue = Number(process.env.PYTHON_ALGORITHM_SERVICE_RETRY_COUNT);
+    if (Number.isFinite(rawValue) && rawValue >= 0) {
+      return Math.floor(rawValue);
+    }
+
+    return 1;
+  }
+
+  private shouldRetryPythonRequest(error: Error) {
+    return (error as PythonRequestError).retryable ?? true;
+  }
+
+  private createPythonRequestError(
+    message: string,
+    retryable: boolean,
+    statusCode?: number
+  ): PythonRequestError {
+    const error = new Error(message) as PythonRequestError;
+    error.retryable = retryable;
+    error.statusCode = statusCode;
+    return error;
   }
 
   private async logInvocation(params: {

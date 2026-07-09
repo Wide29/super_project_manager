@@ -28,10 +28,18 @@ function createMockPrisma(): MockPrisma {
 
 describe('AlgorithmGatewayService python integration', () => {
   const originalPythonUrl = process.env.PYTHON_ALGORITHM_SERVICE_URL;
+  const originalPythonTimeoutMs = process.env.PYTHON_ALGORITHM_SERVICE_TIMEOUT_MS;
+  const originalPythonRetryCount = process.env.PYTHON_ALGORITHM_SERVICE_RETRY_COUNT;
+  const originalPythonApiKey = process.env.PYTHON_ALGORITHM_SERVICE_API_KEY;
+  const originalPythonAuthHeader = process.env.PYTHON_ALGORITHM_SERVICE_AUTH_HEADER;
   const originalFetch = global.fetch;
 
   afterEach(() => {
     process.env.PYTHON_ALGORITHM_SERVICE_URL = originalPythonUrl;
+    process.env.PYTHON_ALGORITHM_SERVICE_TIMEOUT_MS = originalPythonTimeoutMs;
+    process.env.PYTHON_ALGORITHM_SERVICE_RETRY_COUNT = originalPythonRetryCount;
+    process.env.PYTHON_ALGORITHM_SERVICE_API_KEY = originalPythonApiKey;
+    process.env.PYTHON_ALGORITHM_SERVICE_AUTH_HEADER = originalPythonAuthHeader;
     global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
@@ -240,6 +248,175 @@ describe('AlgorithmGatewayService python integration', () => {
         data: expect.objectContaining({
           status: 'fallback',
           fallbackUsed: true
+        })
+      })
+    );
+  });
+
+  it('adds the configured auth header when calling the python service', async () => {
+    process.env.PYTHON_ALGORITHM_SERVICE_URL = 'http://python-service:8001';
+    process.env.PYTHON_ALGORITHM_SERVICE_API_KEY = 'secret-token';
+    process.env.PYTHON_ALGORITHM_SERVICE_AUTH_HEADER = 'X-Algorithm-Key';
+    const prisma = createMockPrisma();
+    prisma.taskItem.findUnique.mockResolvedValue({
+      id: 'task-12',
+      batchId: 'batch-12',
+      batch: {
+        id: 'batch-12',
+        projectId: 'project-12',
+        project: { id: 'project-12' }
+      },
+      assignments: []
+    });
+    prisma.taskMatchingRecommendation.create.mockResolvedValue({});
+    prisma.algorithmInvocationLog.create.mockResolvedValue({});
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        request_id: 'python-request-auth',
+        service_version: 'v1',
+        rule_version: 'matching_rules_v1',
+        feature_version: 'matching_feature_v1',
+        result: {
+          recommendations: []
+        },
+        reasons: [],
+        warnings: [],
+        debug: {}
+      })
+    }) as typeof fetch;
+
+    const service = new AlgorithmGatewayService(prisma as never);
+
+    await service.recommendTaskWorkers({
+      projectId: 'project-12',
+      batchId: 'batch-12',
+      taskId: 'task-12',
+      taskType: 'judge',
+      mediaType: 'text',
+      candidateWorkerIds: ['worker-auth']
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://python-service:8001/api/v1/matching/recommend-task-workers',
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Algorithm-Key': 'secret-token'
+        }
+      })
+    );
+  });
+
+  it('retries the python request before succeeding when a transient error occurs', async () => {
+    process.env.PYTHON_ALGORITHM_SERVICE_URL = 'http://python-service:8001';
+    process.env.PYTHON_ALGORITHM_SERVICE_RETRY_COUNT = '1';
+    const prisma = createMockPrisma();
+    prisma.taskItem.findUnique.mockResolvedValue({
+      id: 'task-18',
+      batchId: 'batch-18',
+      batch: {
+        id: 'batch-18',
+        projectId: 'project-18',
+        project: { id: 'project-18' }
+      },
+      assignments: []
+    });
+    prisma.taskMatchingRecommendation.create.mockResolvedValue({});
+    prisma.algorithmInvocationLog.create.mockResolvedValue({});
+
+    global.fetch = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('temporary upstream error'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          request_id: 'python-request-retry',
+          service_version: 'v1',
+          rule_version: 'matching_rules_v1',
+          feature_version: 'matching_feature_v1',
+          result: {
+            recommendations: []
+          },
+          reasons: [],
+          warnings: [],
+          debug: {}
+        })
+      }) as typeof fetch;
+
+    const service = new AlgorithmGatewayService(prisma as never);
+
+    const response = await service.recommendTaskWorkers({
+      projectId: 'project-18',
+      batchId: 'batch-18',
+      taskId: 'task-18',
+      taskType: 'judge',
+      mediaType: 'text',
+      candidateWorkerIds: ['worker-retry']
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(response.requestId).toBe('python-request-retry');
+    expect(prisma.algorithmInvocationLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'succeeded',
+          fallbackUsed: false
+        })
+      })
+    );
+  });
+
+  it('falls back after a timeout and records the timeout reason in the invocation log', async () => {
+    process.env.PYTHON_ALGORITHM_SERVICE_URL = 'http://python-service:8001';
+    process.env.PYTHON_ALGORITHM_SERVICE_TIMEOUT_MS = '5';
+    process.env.PYTHON_ALGORITHM_SERVICE_RETRY_COUNT = '0';
+    const prisma = createMockPrisma();
+    prisma.taskItem.findUnique.mockResolvedValue({
+      id: 'task-25',
+      batchId: 'batch-25',
+      batch: {
+        id: 'batch-25',
+        projectId: 'project-25',
+        project: { id: 'project-25' }
+      },
+      assignments: []
+    });
+    prisma.algorithmRuleConfig.findFirst.mockResolvedValue({
+      ruleVersion: 'matching_rule_local'
+    });
+    prisma.taskAssignment.findMany.mockResolvedValue([{ assigneeId: 'worker-timeout' }]);
+    prisma.taskMatchingRecommendation.create.mockResolvedValue({});
+    prisma.algorithmInvocationLog.create.mockResolvedValue({});
+
+    global.fetch = jest.fn().mockImplementation((_url, init) => {
+      const signal = init?.signal as AbortSignal | undefined;
+      return new Promise((_, reject) => {
+        signal?.addEventListener('abort', () => {
+          reject(new Error('request timed out'));
+        });
+      });
+    }) as typeof fetch;
+
+    const service = new AlgorithmGatewayService(prisma as never);
+
+    const response = await service.recommendTaskWorkers({
+      projectId: 'project-25',
+      batchId: 'batch-25',
+      taskId: 'task-25',
+      taskType: 'judge',
+      mediaType: 'text',
+      candidateWorkerIds: ['worker-timeout']
+    });
+
+    expect(response.ruleVersion).toBe('matching_rule_local');
+    expect(prisma.algorithmInvocationLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'fallback',
+          fallbackUsed: true,
+          errorMessage: expect.stringContaining('timed out')
         })
       })
     );

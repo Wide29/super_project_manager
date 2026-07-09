@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.domain.common.types import RuleConfig
+from app.infra.settings import settings
 from app.infra.repositories.rule_repository import RuleRepository
 from app.services.feature_service import FeatureService
 from app.main import create_app
@@ -105,3 +106,20 @@ def test_request_id_header_is_sanitized_when_invalid() -> None:
     sanitized_request_id = response.headers["X-Request-ID"]
     assert sanitized_request_id != "bad id with spaces and !"
     assert response.json()["request_id"] == sanitized_request_id
+
+
+def test_health_endpoint_skips_authentication_when_api_key_is_configured() -> None:
+    original_api_key = settings.api_key
+    original_auth_header = settings.auth_header
+    settings.api_key = "shared-secret"
+    settings.auth_header = "X-Algorithm-Key"
+    try:
+        client = TestClient(create_app())
+
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        assert response.json()["result"] == {"status": "ok"}
+    finally:
+        settings.api_key = original_api_key
+        settings.auth_header = original_auth_header

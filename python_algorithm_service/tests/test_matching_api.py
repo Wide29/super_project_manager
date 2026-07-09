@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.infra.settings import settings
 from app.main import create_app
 
 
@@ -68,3 +69,60 @@ def test_matching_rejects_non_positive_top_k_with_error_envelope() -> None:
     assert body["reasons"][0]["code"] == "validation_error"
     assert body["warnings"] == []
     assert body["debug"]["errors"][0]["loc"][-1] == "top_k"
+
+
+def test_matching_returns_401_when_api_key_is_missing() -> None:
+    original_api_key = settings.api_key
+    original_auth_header = settings.auth_header
+    settings.api_key = "shared-secret"
+    settings.auth_header = "X-Algorithm-Key"
+    try:
+        client = TestClient(create_app())
+
+        response = client.post(
+            "/api/v1/matching/recommend-task-workers",
+            json={
+                "task_id": "task-1",
+                "project_id": "project-1",
+                "batch_id": "batch-1",
+                "candidate_worker_ids": ["worker-a"],
+                "top_k": 1,
+                "context": {},
+            },
+        )
+
+        assert response.status_code == 401
+        body = response.json()
+        assert body["service"] == "matching"
+        assert body["reasons"][0]["code"] == "unauthorized"
+    finally:
+        settings.api_key = original_api_key
+        settings.auth_header = original_auth_header
+
+
+def test_matching_accepts_request_when_api_key_header_is_valid() -> None:
+    original_api_key = settings.api_key
+    original_auth_header = settings.auth_header
+    settings.api_key = "shared-secret"
+    settings.auth_header = "X-Algorithm-Key"
+    try:
+        client = TestClient(create_app())
+
+        response = client.post(
+            "/api/v1/matching/recommend-task-workers",
+            headers={"X-Algorithm-Key": "shared-secret"},
+            json={
+                "task_id": "task-1",
+                "project_id": "project-1",
+                "batch_id": "batch-1",
+                "candidate_worker_ids": ["worker-a"],
+                "top_k": 1,
+                "context": {},
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["service"] == "matching"
+    finally:
+        settings.api_key = original_api_key
+        settings.auth_header = original_auth_header

@@ -13,6 +13,7 @@ UNAVAILABLE_FEATURE_VERSION = "unavailable"
 REQUEST_ID_HEADER = "X-Request-ID"
 VALIDATION_ERROR_CODE = "validation_error"
 INTERNAL_ERROR_CODE = "internal_error"
+UNAUTHORIZED_ERROR_CODE = "unauthorized"
 MAX_REQUEST_ID_LENGTH = 128
 ALLOWED_REQUEST_ID_CHARS = set(
     "abcdefghijklmnopqrstuvwxyz"
